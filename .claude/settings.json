@@ -1,0 +1,28 @@
+{
+  "skills": {
+    "emil-design-eng": {
+      "path": ".claude/skills/emil-design-eng/SKILL.md",
+      "description": "Animation & design advice — easing curves, durations, layout patterns collected from building at Vercel and Linear"
+    },
+    "review-animations": {
+      "path": ".claude/skills/review-animations/SKILL.md",
+      "description": "Review animations strictly against established motion rules"
+    },
+    "improve-animations": {
+      "path": ".claude/skills/improve-animations/SKILL.md",
+      "description": "Audit all animations in the codebase and produce prioritized, self-contained fix plans"
+    },
+    "find-animation-opportunities": {
+      "path": ".claude/skills/find-animation-opportunities/SKILL.md",
+      "description": "Search UI for places that would benefit from motion"
+    },
+    "animation-vocabulary": {
+      "path": ".claude/skills/animation-vocabulary/SKILL.md",
+      "description": "Use precise animation terms to get better results from AI"
+    },
+    "apple-design": {
+      "path": ".claude/skills/apple-design/SKILL.md",
+      "description": "Apple's interface design and fluid motion principles for the web"
+    }
+  }
+}
