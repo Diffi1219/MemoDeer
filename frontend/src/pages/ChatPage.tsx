@@ -13,13 +13,14 @@ export default function ChatPage() {
   const { id: notebookId, sid } = useParams<{ id: string; sid?: string }>()
   const navigate = useNavigate()
   const toggleDrawer = useUIStore((s) => s.toggleDrawer)
-  const [sessionId, setSessionId] = useState<string | null>(sid || null)
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(sid || null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [showSessions, setShowSessions] = useState(false)
   const [notebookTitle, setNotebookTitle] = useState('')
   const [editingNote, setEditingNote] = useState<string | null>(null)
   const [noteContent, setNoteContent] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [chatKey, setChatKey] = useState(0)
 
   useEffect(() => {
     if (!notebookId) return
@@ -68,7 +69,7 @@ export default function ChatPage() {
                 <div
                   key={s.id}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-surface-50"
-                  onClick={() => { navigate(`/notebook/${notebookId}/chat/${s.id}`); setShowSessions(false) }}
+                  onClick={() => { navigate(`/notebook/${notebookId}/chat/${s.id}`); setActiveSessionId(s.id); setChatKey(k => k + 1); setShowSessions(false) }}
                 >
                   <MessageSquare size={14} className="text-surface-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -86,7 +87,9 @@ export default function ChatPage() {
       )}
 
       <ChatPanel
+        key={chatKey}
         notebookId={notebookId!}
+        sessionId={activeSessionId}
         onSaveNote={(content) => { setEditingNote('note'); setNoteContent(content) }}
       />
 

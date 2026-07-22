@@ -134,19 +134,39 @@ interface Citation {
 
 interface ChatPanelProps {
   notebookId: string
+  sessionId?: string | null
   onSaveNote?: (content: string) => void
   embedded?: boolean
 }
 
-export default function ChatPanel({ notebookId, onSaveNote, embedded }: ChatPanelProps) {
+export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded }: ChatPanelProps) {
   const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [internalSessionId, setInternalSessionId] = useState<string | null>(sessionId || null)
   const [streaming, setStreaming] = useState(false)
   const [hoveredCitation, setHoveredCitation] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // 当外部 sessionId 变化时，加载对应会话的历史消息
+  useEffect(() => {
+    if (sessionId && sessionId !== internalSessionId) {
+      setInternalSessionId(sessionId)
+      // 加载历史消息
+      apiClient.get(`/notebooks/${notebookId}/chat/sessions/${sessionId}`)
+        .then(r => {
+          const msgs: Message[] = (r.data || []).map((m: any) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            citations: m.citations ? JSON.parse(m.citations) : undefined,
+            source: m.source as 'rag' | 'open' | undefined,
+          }))
+          setMessages(msgs)
+        })
+        .catch(() => setMessages([]))
+    }
+  }, [sessionId, notebookId])
 
   // 自动滚动
   useEffect(() => {
@@ -173,7 +193,7 @@ export default function ChatPanel({ notebookId, onSaveNote, embedded }: ChatPane
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          session_id: sessionId,
+          session_id: internalSessionId,
           message: userMsg.content,
         }),
       })
@@ -239,9 +259,9 @@ export default function ChatPanel({ notebookId, onSaveNote, embedded }: ChatPane
                 return updated
               })
             } else if (parsed.type === 'done') {
-              if (!sessionId) {
+              if (!internalSessionId) {
                 apiClient.get(`/notebooks/${notebookId}/chat/sessions`)
-                  .then(r => { if (r.data.length > 0) setSessionId(r.data[0].id) })
+                  .then(r => { if (r.data.length > 0) setInternalSessionId(r.data[0].id) })
                   .catch(() => {})
               }
             } else if (parsed.type === 'error') {
@@ -272,7 +292,7 @@ export default function ChatPanel({ notebookId, onSaveNote, embedded }: ChatPane
   }
 
   const handleNewChat = () => {
-    setSessionId(null)
+    setInternalSessionId(null)
     setMessages([])
   }
 
