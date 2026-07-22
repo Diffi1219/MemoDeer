@@ -72,6 +72,12 @@ async def generate_quiz(
     question_type_desc = {"choice": "全部选择题", "fill": "全部填空题", "mixed": "选择题和填空题混合"}
     qtype = question_type_desc.get(data.question_type, "选择题和填空题混合")
 
+    # 构建知识点 ID 映射，让 LLM 可以为每道题标注所属知识点
+    kp_id_mapping = ""
+    if kps:
+        kp_lines = [f"- [{kp.id}] {kp.title}" for kp in kps]
+        kp_id_mapping = "知识点列表（请为每道题选择最相关的知识点 ID）：\n" + "\n".join(kp_lines[:20])
+
     system_prompt = f"""你是一个教育领域的出题专家。根据提供的知识点/学习资料生成 {data.count} 道练习题，题型为{qtype}。
 
 要求：
@@ -81,10 +87,12 @@ async def generate_quiz(
 4. 每道题附带简短解析（40字以内）
 5. 输出纯 JSON 数组，不要加 markdown 标记
 
-输出格式：
+{kp_id_mapping}
+
+输出格式（每道题需包含 knowledge_point_id 字段）：
 [
-  {{"type":"choice","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}},
-  {{"type":"fill","question":"...是____。","options":null,"answer":"答案","explanation":"..."}}
+  {{"type":"choice","question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"...","knowledge_point_id":"..."}},
+  {{"type":"fill","question":"...是____。","options":null,"answer":"答案","explanation":"...","knowledge_point_id":"..."}}
 ]"""
 
     from app.services.llm_service import llm_service
@@ -114,7 +122,13 @@ async def generate_quiz(
 
     from datetime import datetime
     questions = []
+    # 建立知识点 ID 集合用于校验 LLM 返回的 knowledge_point_id
+    valid_kp_ids = {kp.id for kp in kps} if kps else set()
     for i, qd in enumerate(questions_data[:data.count]):
+        kp_id = qd.get("knowledge_point_id", "")
+        # 校验 knowledge_point_id 是否有效，无效则置空
+        if kp_id not in valid_kp_ids:
+            kp_id = ""
         questions.append(QuizQuestion(
             id=f"q{i+1}",
             type=qd.get("type", "choice"),
@@ -122,6 +136,7 @@ async def generate_quiz(
             options=qd.get("options"),
             answer=qd.get("answer", ""),
             explanation=qd.get("explanation", ""),
+            knowledge_point_id=kp_id or None,
         ))
 
     return QuizGenerateResponse(
@@ -254,3 +269,53 @@ async def get_global_wrong_answers(
             for a in attempts
         ]
     }
+
+
+# ──────────────── 删除错题 ────────────────
+
+@router.delete("/notebooks/{notebook_id}/quiz/wrong-answers/{attempt_id}")
+async def delete_wrong_answer(
+    notebook_id: str,
+    attempt_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除单条错题记录（通过 notebook_id 和 attempt_id 定位）"""
+    # 直接查询 quiz_attempts 表
+    row = await db.execute(
+        select(QuizAttempt).where(
+            QuizAttempt.id == attempt_id,
+            QuizAttempt.user_id == user.id,
+        )
+    )
+    attempt = row.scalar_one_or_none()
+    if not attempt:
+        raise HTTPException(status_code=404, detail="错题记录不存在")
+    await db.delete(attempt)
+    await db.flush()
+    return {"deleted": True, "id": attempt_id}
+
+
+@router.delete("/notebooks/{notebook_id}/quiz/wrong-answers")
+async def delete_wrong_answers_batch(
+    notebook_id: str,
+    body: dict,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量删除错题记录"""
+    ids: list = body.get("ids", [])
+    if not ids:
+        raise HTTPException(status_code=400, detail="请提供要删除的错题 ID 列表")
+    result = await db.execute(
+        select(QuizAttempt).where(
+            QuizAttempt.id.in_(ids),
+            QuizAttempt.user_id == user.id,
+            QuizAttempt.notebook_id == notebook_id,
+        )
+    )
+    attempts = result.scalars().all()
+    for a in attempts:
+        await db.delete(a)
+    await db.flush()
+    return {"deleted": len(attempts)}

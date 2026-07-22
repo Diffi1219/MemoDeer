@@ -6,6 +6,7 @@ import { Search, BookOpen, ChevronRight, ChevronDown, X, Loader2, FileText } fro
 
 interface ChunkResult {
   chunk_id: string
+  document_id: string
   document_name: string
   content: string
   score: number
@@ -165,8 +166,10 @@ export default function GlobalSearchModal() {
                               handleClose()
                               if (chunk.chunk_id?.startsWith('kp_')) {
                                 navigate(`/notebook/${nb.notebook_id}`)
+                              } else if (chunk.document_id) {
+                                navigate(`/document/${chunk.document_id}/view?highlight=${chunk.chunk_id}`)
                               } else {
-                                navigate(`/document/${chunk.chunk_id.split('-')[0] || ''}/view?highlight=${chunk.chunk_id}`)
+                                navigate(`/notebook/${nb.notebook_id}`)
                               }
                             }}
                             className="w-full text-left bg-surface-50 rounded-lg p-2.5 hover:bg-primary-50 transition-colors"

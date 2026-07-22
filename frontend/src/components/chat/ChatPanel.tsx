@@ -143,29 +143,33 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
   const navigate = useNavigate()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [internalSessionId, setInternalSessionId] = useState<string | null>(sessionId || null)
   const [streaming, setStreaming] = useState(false)
   const [hoveredCitation, setHoveredCitation] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const loadedSessionRef = useRef<string | null>(null)
 
-  // 当外部 sessionId 变化时，加载对应会话的历史消息
+  // 当 sessionId 变化或首次挂载时，加载对应会话的历史消息
   useEffect(() => {
-    if (sessionId && sessionId !== internalSessionId) {
-      setInternalSessionId(sessionId)
-      // 加载历史消息
-      apiClient.get(`/notebooks/${notebookId}/chat/sessions/${sessionId}`)
-        .then(r => {
-          const msgs: Message[] = (r.data || []).map((m: any) => ({
-            role: m.role as 'user' | 'assistant',
-            content: m.content,
-            citations: m.citations ? JSON.parse(m.citations) : undefined,
-            source: m.source as 'rag' | 'open' | undefined,
-          }))
-          setMessages(msgs)
-        })
-        .catch(() => setMessages([]))
+    if (!sessionId) {
+      setMessages([])
+      loadedSessionRef.current = null
+      return
     }
+    // 避免对同一个 session 重复请求
+    if (loadedSessionRef.current === sessionId) return
+    loadedSessionRef.current = sessionId
+    apiClient.get(`/notebooks/${notebookId}/chat/sessions/${sessionId}`)
+      .then(r => {
+        const msgs: Message[] = (r.data || []).map((m: any) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          citations: m.citations ? JSON.parse(m.citations) : undefined,
+          source: m.source as 'rag' | 'open' | undefined,
+        }))
+        setMessages(msgs)
+      })
+      .catch(() => setMessages([]))
   }, [sessionId, notebookId])
 
   // 自动滚动
@@ -193,7 +197,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          session_id: internalSessionId,
+          session_id: loadedSessionRef.current,
           message: userMsg.content,
         }),
       })
@@ -259,9 +263,13 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                 return updated
               })
             } else if (parsed.type === 'done') {
-              if (!internalSessionId) {
+              if (!loadedSessionRef.current) {
                 apiClient.get(`/notebooks/${notebookId}/chat/sessions`)
-                  .then(r => { if (r.data.length > 0) setInternalSessionId(r.data[0].id) })
+                  .then(r => {
+                    if (r.data.length > 0) {
+                      loadedSessionRef.current = r.data[0].id
+                    }
+                  })
                   .catch(() => {})
               }
             } else if (parsed.type === 'error') {
@@ -292,7 +300,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
   }
 
   const handleNewChat = () => {
-    setInternalSessionId(null)
+    loadedSessionRef.current = null
     setMessages([])
   }
 

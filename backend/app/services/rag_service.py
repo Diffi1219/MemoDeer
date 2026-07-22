@@ -248,6 +248,8 @@ def _merge_hybrid_results(
     # 向量结果：score = 1 - distance
     for r in vector_results:
         r["score"] = 1.0 - r.get("distance", 0.0)
+        if r.get("metadata") is None:
+            r["metadata"] = {}
         r["metadata"]["source"] = "vector"
         seen_ids.add(r.get("id", ""))
         merged.append(r)
@@ -255,6 +257,8 @@ def _merge_hybrid_results(
     # 关键词结果（去重）
     for r in keyword_results:
         if r.get("id", "") not in seen_ids:
+            if r.get("metadata") is None:
+                r["metadata"] = {}
             r["metadata"]["source"] = "keyword"
             seen_ids.add(r.get("id", ""))
             merged.append(r)
@@ -269,7 +273,10 @@ async def search_notebook(db: AsyncSession, notebook_id: str, query: str, top_k:
     query_embedding = embedding_service.embed_query(query)
     vector_results = vector_store.search(notebook_id, query_embedding, top_k=top_k * 2)
     keyword_results = await _keyword_search_chunks(db, notebook_id, query, top_k)
-    return _merge_hybrid_results(vector_results, keyword_results, top_k)
+    merged = _merge_hybrid_results(vector_results, keyword_results, top_k)
+    # 按距离阈值过滤，只保留真正相关的结果
+    merged = [c for c in merged if c.get("distance", 1.0) < RAG_DISTANCE_THRESHOLD]
+    return merged[:top_k]
 
 
 async def search_all_notebooks(
@@ -352,7 +359,7 @@ async def retrieve_context(notebook_id: str, query: str, top_k: int = None) -> L
 
 
 def build_qa_prompt(question: str, context_chunks: List[dict]) -> List[dict]:
-    """构建带上下文的问答 prompt"""
+    """构建带上下文的问答 prompt — 优先基于上下文，上下文不足时结合通用知识"""
     # 构建上下文文本
     context_parts = []
     for i, chunk in enumerate(context_chunks):
@@ -361,17 +368,18 @@ def build_qa_prompt(question: str, context_chunks: List[dict]) -> List[dict]:
 
     context_text = "\n\n---\n\n".join(context_parts)
 
-    system_prompt = """你是一个 AI 学习助手 MemoDeer。请严格基于提供的上下文回答用户的问题。
+    system_prompt = """你是一个 AI 学习助手 MemoDeer。请优先基于提供的上下文回答用户的问题，当上下文不足时结合你的通用知识给出完整回答。
 
 规则：
-1. 回答必须基于上下文内容，不要使用你的先验知识
-2. **每个观点/事实/知识点后面必须紧跟引用标注 [1]、[2] 等**，表示该信息来自哪个文档
+1. 优先使用上下文内容回答，如果上下文里有用户要的信息，尽量详细引用
+2. **基于上下文的部分，每个观点/事实后面紧跟引用标注 [1]、[2] 等**，表示该信息来自哪个文档
 3. **在回答的末尾，必须添加"📚 参考文档"段落**，列出实际引用到的文档名称：
    📚 参考文档：
    - [1] 文档名称
    - [2] 文档名称
-4. 如果上下文不足以回答问题，诚实地说"根据现有资料无法确定"
-5. 用清晰易懂的中文回答，适合学生理解
+4. 如果上下文只涵盖了概念原理但缺少用户需要的具体细节（如代码示例、例题等），先基于上下文解释概念原理，再结合你的通用知识补充用户需要的具体细节，并在补充前加一句说明（如"📌 以下代码/示例基于通用知识补充"）
+5. 如果上下文完全无法回答问题，明确说明"你的笔记中没有相关内容，以下基于通用知识回答"，然后给出完整回答
+6. 用清晰易懂的中文回答，适合学生理解
 
 【重要】你可以使用交互式 HTML 来呈现复杂的知识点。当需要展示图表、
 表格、对比、步骤或可视化概念时，使用 ```html 代码块输出 HTML。
@@ -401,7 +409,7 @@ HTML 规则：
 
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"上下文资料：\n{context_text}\n\n用户问题：{question}\n\n请基于以上上下文回答，每个观点后标注引用来源 [1][2] 等，并在回答末尾列出参考文档名称。"},
+        {"role": "user", "content": f"上下文资料：\n{context_text}\n\n用户问题：{question}\n\n请基于以上上下文回答，基于上下文的部分标注引用来源 [1][2] 等，上下文不足时用通用知识补充并在回答末尾列出参考文档名称。"},
     ]
     return messages
 
@@ -671,8 +679,17 @@ async def create_note_from_text(
     title: str = None,
 ) -> dict:
     """将用户编辑后的聊天回答保存为笔记文档"""
+    import re, os
     doc_id = uuid.uuid4().hex
-    safe_title = (title or content[:30]).strip() + " (来自对话)"
+    raw_title = (title or content[:30]).strip()
+    # 清理文件名中的非法字符：去除 Markdown 标题标记、换行符和文件系统非法字符
+    raw_title = re.sub(r'^#+\s*', '', raw_title)  # 去除 Markdown 标题标记
+    raw_title = raw_title.replace('\n', ' ').replace('\r', ' ')
+    raw_title = re.sub(r'[\\/:*?"<>|]', '-', raw_title)  # 替换 Windows 非法文件名字符
+    raw_title = re.sub(r'\s+', ' ', raw_title).strip()
+    if not raw_title:
+        raw_title = "笔记"
+    safe_title = raw_title[:50] + " (来自对话)"
 
     document = Document(
         id=doc_id,
@@ -1178,15 +1195,25 @@ async def generate_knowledge_cards(
         print(f"[Cards] JSON 解析失败: {e}")
         return []
 
-    # 存入 knowledge_points 表（先删旧，再写新）
-    old_points = await db.execute(
-        select(KnowledgePoint).where(KnowledgePoint.notebook_id == notebook_id)
-    )
-    for p in old_points.scalars().all():
-        await db.delete(p)
+    # 先收集旧知识点的 ID，用于新数据写入成功后再清理
+    # 如果指定了 document_ids，只清理这些文档关联的旧知识点，保留其他文档的卡片
+    if document_ids:
+        old_points_result = await db.execute(
+            select(KnowledgePoint).where(
+                KnowledgePoint.notebook_id == notebook_id,
+                KnowledgePoint.document_id.in_(document_ids)
+            )
+        )
+    else:
+        old_points_result = await db.execute(
+            select(KnowledgePoint).where(KnowledgePoint.notebook_id == notebook_id)
+        )
+    old_point_ids = [p.id for p in old_points_result.scalars().all()]
 
+    new_point_ids = []
     for item in cards:
         kp_id = uuid.uuid4().hex
+        new_point_ids.append(kp_id)
 
         # 通过语义搜索为卡片定位来源文档/chunk
         doc_id = ""
@@ -1221,6 +1248,16 @@ async def generate_knowledge_cards(
         item["chunk_id"] = chunk_id
 
     await db.flush()
+
+    # 新数据写入成功后才删除旧记录，避免先删旧再写新导致数据丢失
+    if old_point_ids:
+        for pid in old_point_ids:
+            if pid not in new_point_ids:
+                old_kp = await db.get(KnowledgePoint, pid)
+                if old_kp:
+                    await db.delete(old_kp)
+        await db.flush()
+
     return cards
 
 

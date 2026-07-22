@@ -13,14 +13,13 @@ export default function ChatPage() {
   const { id: notebookId, sid } = useParams<{ id: string; sid?: string }>()
   const navigate = useNavigate()
   const toggleDrawer = useUIStore((s) => s.toggleDrawer)
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(sid || null)
+  const [notebookTitle, setNotebookTitle] = useState('')
   const [sessions, setSessions] = useState<Session[]>([])
   const [showSessions, setShowSessions] = useState(false)
-  const [notebookTitle, setNotebookTitle] = useState('')
   const [editingNote, setEditingNote] = useState<string | null>(null)
   const [noteContent, setNoteContent] = useState('')
   const [savingNote, setSavingNote] = useState(false)
-  const [chatKey, setChatKey] = useState(0)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null) // session id to delete
 
   useEffect(() => {
     if (!notebookId) return
@@ -36,9 +35,14 @@ export default function ChatPage() {
   // For the standalone page, we track sessionId to show the right title
 
   const handleDeleteSession = async (sessId: string) => {
-    if (!confirm('删除此对话？')) return
-    await apiClient.delete(`/notebooks/${notebookId}/chat/sessions/${sessId}`)
-    setSessions((prev) => prev.filter((s) => s.id !== sessId))
+    setDeleteConfirm(sessId)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm || !notebookId) return
+    await apiClient.delete(`/notebooks/${notebookId}/chat/sessions/${deleteConfirm}`)
+    setSessions((prev) => prev.filter((s) => s.id !== deleteConfirm))
+    setDeleteConfirm(null)
   }
 
   return (
@@ -69,7 +73,7 @@ export default function ChatPage() {
                 <div
                   key={s.id}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-surface-50"
-                  onClick={() => { navigate(`/notebook/${notebookId}/chat/${s.id}`); setActiveSessionId(s.id); setChatKey(k => k + 1); setShowSessions(false) }}
+                  onClick={() => { navigate(`/notebook/${notebookId}/chat/${s.id}`); setShowSessions(false) }}
                 >
                   <MessageSquare size={14} className="text-surface-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -87,9 +91,8 @@ export default function ChatPage() {
       )}
 
       <ChatPanel
-        key={chatKey}
         notebookId={notebookId!}
-        sessionId={activeSessionId}
+        sessionId={sid || null}
         onSaveNote={(content) => { setEditingNote('note'); setNoteContent(content) }}
       />
 
@@ -127,6 +130,20 @@ export default function ChatPage() {
                 {savingNote ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 {savingNote ? '保存中...' : '保存到笔记本'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认弹窗 */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-2">删除此对话？</h3>
+            <p className="text-sm text-surface-500 mb-6">删除后对话记录将无法恢复。</p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">删除</button>
             </div>
           </div>
         </div>

@@ -105,13 +105,21 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
       if (loaded.length > 0) {
         setCards(loaded)
         setGenerated(true)
+        setError('')
       } else {
         // 无已有卡片，保持空状态
         setCards([])
         setGenerated(false)
+        setError('')
       }
-    } catch {
-      // 加载失败忽略
+    } catch (err: any) {
+      // 403 → 会员可能已过期，同步状态到 authStore
+      if (err.response?.status === 403) {
+        useAuthStore.getState().setPremium(false, 'free', null)
+      }
+      setError(err.response?.status === 403
+        ? '会员已过期，请续费后查看知识卡片'
+        : '加载知识卡片失败，请检查网络连接')
     }
   }
 
@@ -235,6 +243,117 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
   }
   const cancelEdit = () => setEditingCard(null)
 
+  // ── 文档选择器弹窗（独立组件渲染函数，在多处复用）──
+  const renderDocPicker = () => (
+    <>
+      {showDocPicker && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setShowDocPicker(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
+              <div className="flex items-center gap-2">
+                <FileText size={16} className="text-primary-500" />
+                <span className="text-sm font-semibold text-surface-700">选择生成来源</span>
+              </div>
+              <button onClick={() => setShowDocPicker(false)} className="p-1 hover:bg-surface-100 rounded-lg">
+                <XIcon size={18} />
+              </button>
+            </div>
+
+            <div className="px-4 py-2 bg-surface-50 border-b border-surface-100">
+              <p className="text-xs text-surface-400">
+                笔记本：{notebooks.find(n => n.id === selectedNbId)?.title || selectedNbId}
+                <span className="ml-2 text-surface-300">
+                  （共 {documents.filter(d => d.status === 'completed').length} 篇已完成文档）
+                </span>
+              </p>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-4 py-2">
+              {documents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Loader2 size={24} className="animate-spin text-surface-300 mx-auto mb-2" />
+                  <p className="text-xs text-surface-400">加载文档列表...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={toggleAllDocs}
+                      className="text-xs text-primary-500 hover:text-primary-700"
+                    >
+                      {tempSelectedDocIds.size === documents.filter(d => d.status === 'completed').length
+                        ? '取消全选'
+                        : '全选已完成文档'}
+                    </button>
+                    <span className="text-xs text-surface-400">
+                      已选 {tempSelectedDocIds.size} 篇
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    {documents.map(doc => {
+                      const isCompleted = doc.status === 'completed'
+                      const isSelected = tempSelectedDocIds.has(doc.id)
+                      return (
+                        <button
+                          key={doc.id}
+                          onClick={() => isCompleted && toggleDocSelection(doc.id)}
+                          disabled={!isCompleted}
+                          className={`w-full text-left p-3 rounded-xl border transition-colors flex items-center gap-3 ${
+                            !isCompleted
+                              ? 'border-surface-100 bg-surface-50 opacity-50 cursor-not-allowed'
+                              : isSelected
+                              ? 'border-primary-400 bg-primary-50'
+                              : 'border-surface-200 hover:border-primary-200'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            isSelected ? 'bg-primary-500 border-primary-500' : 'border-surface-300'
+                          }`}>
+                            {isSelected && <Check size={12} className="text-white" />}
+                          </div>
+                          <FileText size={16} className={`flex-shrink-0 ${isCompleted ? 'text-surface-400' : 'text-surface-300'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-surface-700 truncate">{doc.filename}</p>
+                            <p className="text-xs text-surface-400">
+                              {doc.file_type?.toUpperCase()} · {isCompleted ? '已完成' : doc.status}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t border-surface-200 flex gap-2">
+              <button
+                onClick={() => setShowDocPicker(false)}
+                className="flex-1 py-2 border border-surface-200 text-surface-500 text-sm rounded-xl hover:bg-surface-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmGenerate}
+                disabled={tempSelectedDocIds.size === 0}
+                className={`flex-1 py-2 text-white text-sm rounded-xl font-medium flex items-center justify-center gap-2 ${
+                  tempSelectedDocIds.size === 0
+                    ? 'bg-surface-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                }`}
+              >
+                <Sparkles size={14} />
+                开始生成 ({tempSelectedDocIds.size}篇)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
   // ── 删除卡片 ──
   const deleteCard = async (cardId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -295,48 +414,58 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
   // ── 空状态 ──
   if (!generated && !loading) {
     return (
-      <div className="h-full overflow-y-auto">
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
-            <Sparkles size={36} className="text-amber-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-surface-700 mb-1">AI 知识卡片</h3>
-          <p className="text-sm text-surface-400 text-center mb-2 max-w-xs">
-            基于笔记本中的文档，AI 自动生成知识卡片和记忆口诀
-          </p>
-          {error && (
-            <p className="text-sm text-red-500 mb-3">{error}</p>
-          )}
-          {selectedNbId && notebooks.length > 0 && (
-            <p className="text-xs text-surface-400 mb-4">
-              当前笔记本：{notebooks.find(n => n.id === selectedNbId)?.title || selectedNbId}
+      <>
+        <div className="h-full overflow-y-auto">
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
+              <Sparkles size={36} className="text-amber-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-surface-700 mb-1">AI 知识卡片</h3>
+            <p className="text-sm text-surface-400 text-center mb-2 max-w-xs">
+              基于笔记本中的文档，AI 自动生成知识卡片和记忆口诀
             </p>
-          )}
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => {
-                if (propNotebookId && selectedNbId) {
-                  openDocPicker()
-                } else {
-                  setShowNotebookPicker(true)
-                }
-              }}
-              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200 flex items-center gap-2"
-            >
-              <Sparkles size={18} />
-              生成知识卡片
-            </button>
-            {!propNotebookId && (
-              <button
-                onClick={() => setShowNotebookPicker(true)}
-                className="text-sm text-primary-500 hover:underline"
-              >
-                选择其他笔记本
-              </button>
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3">
+                <p className="text-sm text-red-600">{error}</p>
+                {error.includes('会员') && (
+                  <button onClick={() => navigate('/membership')} className="mt-2 text-xs text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg">
+                    去续费
+                  </button>
+                )}
+              </div>
             )}
+            {selectedNbId && notebooks.length > 0 && (
+              <p className="text-xs text-surface-400 mb-4">
+                当前笔记本：{notebooks.find(n => n.id === selectedNbId)?.title || selectedNbId}
+              </p>
+            )}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  if (propNotebookId && selectedNbId) {
+                    openDocPicker()
+                  } else {
+                    setShowNotebookPicker(true)
+                  }
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200 flex items-center gap-2"
+              >
+                <Sparkles size={18} />
+                生成知识卡片
+              </button>
+              {!propNotebookId && (
+                <button
+                  onClick={() => setShowNotebookPicker(true)}
+                  className="text-sm text-primary-500 hover:underline"
+                >
+                  选择其他笔记本
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+        {renderDocPicker()}
+      </>
     )
   }
 
@@ -636,111 +765,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
       )}
 
       {/* 文档选择弹窗 — 生成卡片前选择来源文档 */}
-      {showDocPicker && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowDocPicker(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
-              <div className="flex items-center gap-2">
-                <FileText size={16} className="text-primary-500" />
-                <span className="text-sm font-semibold text-surface-700">选择生成来源</span>
-              </div>
-              <button onClick={() => setShowDocPicker(false)} className="p-1 hover:bg-surface-100 rounded-lg">
-                <XIcon size={18} />
-              </button>
-            </div>
-
-            <div className="px-4 py-2 bg-surface-50 border-b border-surface-100">
-              <p className="text-xs text-surface-400">
-                笔记本：{notebooks.find(n => n.id === selectedNbId)?.title || selectedNbId}
-                <span className="ml-2 text-surface-300">
-                  （共 {documents.filter(d => d.status === 'completed').length} 篇已完成文档）
-                </span>
-              </p>
-            </div>
-
-            <div className="overflow-y-auto flex-1 px-4 py-2">
-              {documents.length === 0 ? (
-                <div className="text-center py-8">
-                  <Loader2 size={24} className="animate-spin text-surface-300 mx-auto mb-2" />
-                  <p className="text-xs text-surface-400">加载文档列表...</p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <button
-                      onClick={toggleAllDocs}
-                      className="text-xs text-primary-500 hover:text-primary-700"
-                    >
-                      {tempSelectedDocIds.size === documents.filter(d => d.status === 'completed').length
-                        ? '取消全选'
-                        : '全选已完成文档'}
-                    </button>
-                    <span className="text-xs text-surface-400">
-                      已选 {tempSelectedDocIds.size} 篇
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {documents.map(doc => {
-                      const isCompleted = doc.status === 'completed'
-                      const isSelected = tempSelectedDocIds.has(doc.id)
-                      return (
-                        <button
-                          key={doc.id}
-                          onClick={() => isCompleted && toggleDocSelection(doc.id)}
-                          disabled={!isCompleted}
-                          className={`w-full text-left p-3 rounded-xl border transition-colors flex items-center gap-3 ${
-                            !isCompleted
-                              ? 'border-surface-100 bg-surface-50 opacity-50 cursor-not-allowed'
-                              : isSelected
-                              ? 'border-primary-400 bg-primary-50'
-                              : 'border-surface-200 hover:border-primary-200'
-                          }`}
-                        >
-                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                            isSelected ? 'bg-primary-500 border-primary-500' : 'border-surface-300'
-                          }`}>
-                            {isSelected && <Check size={12} className="text-white" />}
-                          </div>
-                          <FileText size={16} className={`flex-shrink-0 ${isCompleted ? 'text-surface-400' : 'text-surface-300'}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-surface-700 truncate">{doc.filename}</p>
-                            <p className="text-xs text-surface-400">
-                              {doc.file_type?.toUpperCase()} · {isCompleted ? '已完成' : doc.status}
-                            </p>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="px-4 py-3 border-t border-surface-200 flex gap-2">
-              <button
-                onClick={() => setShowDocPicker(false)}
-                className="flex-1 py-2 border border-surface-200 text-surface-500 text-sm rounded-xl hover:bg-surface-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={confirmGenerate}
-                disabled={tempSelectedDocIds.size === 0}
-                className={`flex-1 py-2 text-white text-sm rounded-xl font-medium flex items-center justify-center gap-2 ${
-                  tempSelectedDocIds.size === 0
-                    ? 'bg-surface-300 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
-                }`}
-              >
-                <Sparkles size={14} />
-                开始生成 ({tempSelectedDocIds.size}篇)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {renderDocPicker()}
     </div>
   )
 }

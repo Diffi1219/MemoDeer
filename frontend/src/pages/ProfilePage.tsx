@@ -16,7 +16,7 @@ export default function ProfilePage() {
 
   // 加载统计
   useEffect(() => {
-    apiClient.get('/user/stats').then(r => setStats(r.data)).catch(() => {})
+    apiClient.get('/auth/user/stats').then(r => setStats(r.data)).catch(() => {})
     // 打卡逻辑
     const today = new Date().toISOString().slice(0, 10)
     const lastCheckin = localStorage.getItem('last_checkin_date')

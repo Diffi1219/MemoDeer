@@ -71,6 +71,9 @@ export default function NotebookPage() {
   const [createName, setCreateName] = useState('')
   const [creating, setCreating] = useState(false)
 
+  // 删除确认弹窗（替代原生 confirm，解决预览浏览器屏蔽问题）
+  const [deleteTarget, setDeleteTarget] = useState<{ node: TreeNode } | null>(null)
+
   // Search
   const [searchResults, setSearchResults] = useState<any[] | null>(null)
   const [searching, setSearching] = useState(false)
@@ -147,7 +150,13 @@ export default function NotebookPage() {
   }
 
   const handleDelete = async (node: TreeNode) => {
-    if (!confirm(`确定删除"${node.name}"吗？此操作不可撤销。`)) return
+    setDeleteTarget({ node })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    const node = deleteTarget.node
+    setDeleteTarget(null)
     try {
       if (node.type === 'folder') {
         await apiClient.delete(`/folders/${node.id}`)
@@ -669,6 +678,22 @@ export default function NotebookPage() {
               >
                 {creating ? <Loader2 size={16} className="animate-spin" /> : '创建'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认弹窗 — 替代原生 confirm（预览浏览器中 confirm 被屏蔽） */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-2">确定删除？</h3>
+            <p className="text-sm text-surface-500 mb-6">
+              "{deleteTarget.node.name}" 将被永久删除，所有相关数据和向量也会被清除，无法恢复。
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">删除</button>
             </div>
           </div>
         </div>

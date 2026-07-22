@@ -245,6 +245,7 @@ class QuizQuestion(BaseModel):
     options: Optional[List[str]] = None  # 选择题选项
     answer: str
     explanation: str
+    knowledge_point_id: Optional[str] = None  # 题目关联的知识点 ID，用于错题追踪
 
 
 class QuizGenerateResponse(BaseModel):
