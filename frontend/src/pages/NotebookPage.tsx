@@ -7,7 +7,8 @@ import { useAuthStore } from '../store/authStore'
 import {
   ArrowLeft, Menu, Search, MessageCircle, Upload, Loader2,
   X, FileText, FlipVertical, GraduationCap, Crown, Send,
-  AlertTriangle, ListChecks, Pencil, Shuffle, Trash2
+  AlertTriangle, ListChecks, Pencil, Shuffle, Trash2,
+  Check, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import FileTree from '../components/file-tree/FileTree'
 import { type TreeNode } from '../components/file-tree/FileTreeNode'
@@ -27,6 +28,16 @@ interface PendingItem {
 interface KnowledgePoint {
   id: string; notebook_id: string; document_id?: string
   title: string; content: string; tags: string; created_at: string
+}
+
+interface QuizQuestion {
+  id: string
+  type: 'choice' | 'fill'
+  question: string
+  options: string[] | null
+  answer: string
+  explanation: string
+  knowledge_point_id?: string
 }
 
 type TabKey = 'files' | 'cards' | 'quiz'
@@ -714,13 +725,21 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
   const [quizCount, setQuizCount] = useState(5)
   const [quizType, setQuizType] = useState<'choice' | 'fill' | 'mixed'>('mixed')
 
-  // 错题本
+  // 错题本（内联上下分屏）
   const [wrongCounts, setWrongCounts] = useState<Record<string, number>>({})
-  const [showWrongModal, setShowWrongModal] = useState(false)
+  const [showWrongBook, setShowWrongBook] = useState(false)
   const [wrongAnswers, setWrongAnswers] = useState<any[]>([])
   const [loadingWrong, setLoadingWrong] = useState(false)
   const [deletingWrong, setDeletingWrong] = useState<string | null>(null)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  // 内联出题状态
+  const [inlineQuiz, setInlineQuiz] = useState<QuizQuestion[] | null>(null)
+  const [quizCurrentIndex, setQuizCurrentIndex] = useState(0)
+  const [quizUserAnswers, setQuizUserAnswers] = useState<Record<string, string>>({})
+  const [quizShowResult, setQuizShowResult] = useState<Record<string, boolean>>({})
+  const [quizFillInput, setQuizFillInput] = useState('')
+  const [quizGenerating, setQuizGenerating] = useState(false)
+  const [quizCompleted, setQuizCompleted] = useState(false)
 
   useEffect(() => {
     if (!notebookId) return
@@ -753,26 +772,92 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
     }
   }
 
-  const handleStart = () => {
-    setShowConfirmModal(true)
+  // ── 内联出题 ──
+  const handleGenerateQuiz = async () => {
+    const selectedKps = kps.filter(k => selected.has(k.id))
+    setQuizGenerating(true)
+    try {
+      const res = await apiClient.post(`/notebooks/${notebookId}/quiz/generate`, {
+        question_type: quizType,
+        count: quizCount,
+        knowledge_point_ids: selectedKps.map((k: any) => k.id),
+      })
+      const qs = res.data.questions || []
+      setInlineQuiz(qs)
+      setQuizCurrentIndex(0)
+      setQuizUserAnswers({})
+      setQuizShowResult({})
+      setQuizFillInput('')
+      setQuizCompleted(false)
+    } catch { /* ignore */ }
+    finally { setQuizGenerating(false) }
   }
 
-  const confirmStart = () => {
-    const selectedKps = kps.filter(k => selected.has(k.id))
-    setShowConfirmModal(false)
-    navigate(`/notebook/${notebookId}/quiz`, { state: { kps: selectedKps, count: quizCount, quizType } })
+  const handleQuizAnswer = (answer: string) => {
+    if (!inlineQuiz) return
+    const q = inlineQuiz[quizCurrentIndex]
+    if (!q || quizShowResult[q.id]) return
+    setQuizUserAnswers(prev => ({ ...prev, [q.id]: answer }))
+    setQuizShowResult(prev => ({ ...prev, [q.id]: true }))
+  }
+
+  const handleQuizNext = () => {
+    if (!inlineQuiz) return
+    if (quizCurrentIndex < inlineQuiz.length - 1) {
+      setQuizCurrentIndex(quizCurrentIndex + 1)
+      setQuizFillInput('')
+    } else if (Object.keys(quizUserAnswers).length === inlineQuiz.length) {
+      setQuizCompleted(true)
+      submitQuizAnswers()
+    }
+  }
+
+  const handleQuizPrev = () => {
+    if (quizCurrentIndex > 0) {
+      setQuizCurrentIndex(quizCurrentIndex - 1)
+      setQuizFillInput('')
+    }
+  }
+
+  const submitQuizAnswers = async () => {
+    if (!inlineQuiz) return
+    try {
+      await apiClient.post(`/notebooks/${notebookId}/quiz/submit`, {
+        answers: inlineQuiz.map(q => ({
+          question: q.question,
+          user_answer: quizUserAnswers[q.id] || '',
+          correct_answer: q.answer,
+          explanation: q.explanation,
+          is_correct: (quizUserAnswers[q.id] || '').trim().toLowerCase() === q.answer.trim().toLowerCase(),
+          knowledge_point_id: q.knowledge_point_id || null,
+        })),
+      })
+    } catch { /* ignore */ }
+  }
+
+  const resetQuiz = () => {
+    setInlineQuiz(null)
+    setQuizCurrentIndex(0)
+    setQuizUserAnswers({})
+    setQuizShowResult({})
+    setQuizFillInput('')
+    setQuizCompleted(false)
+    fetchWrongStats()
   }
 
   // ── 错题本 ──
   const openWrongBook = async () => {
     if (!notebookId) return
-    setShowWrongModal(true)
-    setLoadingWrong(true)
-    try {
-      const r = await apiClient.get(`/notebooks/${notebookId}/quiz/wrong-answers`)
-      setWrongAnswers(r.data.wrong_answers || [])
-    } catch { setWrongAnswers([]) }
-    finally { setLoadingWrong(false) }
+    const toggling = !showWrongBook
+    setShowWrongBook(toggling)
+    if (toggling) {
+      setLoadingWrong(true)
+      try {
+        const r = await apiClient.get(`/notebooks/${notebookId}/quiz/wrong-answers`)
+        setWrongAnswers(r.data.wrong_answers || [])
+      } catch { setWrongAnswers([]) }
+      finally { setLoadingWrong(false) }
+    }
   }
 
   const deleteWrongAnswer = async (attemptId: string) => {
@@ -923,102 +1008,194 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
       </div>
 
       <button
-        onClick={handleStart}
-        disabled={selected.size === 0}
+        onClick={handleGenerateQuiz}
+        disabled={selected.size === 0 || quizGenerating}
         className="w-full py-3 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
       >
         <GraduationCap size={18} />
-        开始出题（{quizCount === 0 ? '不限' : `${quizCount} 题`} · {selected.size} 个知识点）
+        {quizGenerating ? '正在出题...' : `开始出题（${quizCount === 0 ? '不限' : `${quizCount} 题`} · ${selected.size} 个知识点）`}
       </button>
 
-      {/* 错题本弹窗 */}
-      {showWrongModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowWrongModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
-              <div className="flex items-center gap-2 text-sm font-semibold text-surface-700">
-                <AlertTriangle size={16} className="text-red-500" /> 错题本
-              </div>
-              <div className="flex items-center gap-2">
-                {wrongAnswers.length > 0 && (
-                  <button
-                    onClick={deleteAllWrong}
-                    disabled={deletingWrong === '__all__'}
-                    className="px-2.5 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {deletingWrong === '__all__' ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-                    清空全部
-                  </button>
-                )}
-                <button onClick={() => setShowWrongModal(false)} className="p-1 hover:bg-surface-100 rounded-lg">
-                  <X size={18} />
+      {/* 错题本上下分屏 — 点击错题本按钮后展开在下方 */}
+      {showWrongBook && (
+        <div className="border-t border-red-200 bg-red-50/30">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-red-100">
+            <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
+              <AlertTriangle size={14} className="text-red-500" /> 错题本 ({wrongAnswers.length})
+            </div>
+            <div className="flex items-center gap-2">
+              {wrongAnswers.length > 0 && (
+                <button
+                  onClick={deleteAllWrong}
+                  disabled={deletingWrong === '__all__'}
+                  className="px-2 py-1 text-xs bg-white text-red-500 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {deletingWrong === '__all__' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                  清空全部
                 </button>
-              </div>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {loadingWrong ? (
-                <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-surface-300" /></div>
-              ) : wrongAnswers.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <AlertTriangle size={36} className="text-surface-200 mx-auto mb-2" />
-                  <p className="text-sm text-surface-400">暂无错题记录</p>
-                  <p className="text-xs text-surface-300 mt-1">完成出题练习后，答错的题目会出现在这里</p>
-                </div>
-              ) : (
-                <div className="px-4 py-3 space-y-3">
-                  {wrongAnswers.map((wa: any, i: number) => (
-                    <div key={wa.id || i} className="p-3 rounded-xl border border-surface-200 bg-surface-50 relative group">
-                      <p className="text-xs text-surface-500 mb-1.5 pr-8">Q: {wa.question}</p>
-                      <div className="flex gap-4 text-xs mb-1">
-                        <span className="text-red-500">你的答案: {wa.user_answer || '(未作答)'}</span>
-                        <span className="text-green-600">正确答案: {wa.correct_answer}</span>
-                      </div>
-                      {wa.explanation && (
-                        <p className="text-xs text-surface-400">💡 {wa.explanation}</p>
-                      )}
-                      <button
-                        onClick={() => deleteWrongAnswer(wa.id)}
-                        disabled={deletingWrong === wa.id}
-                        className="absolute top-3 right-3 p-1 rounded-lg bg-white border border-surface-200 text-surface-400 hover:text-red-500 hover:border-red-200 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                        title="删除此错题"
-                      >
-                        {deletingWrong === wa.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={13} />}
-                      </button>
-                    </div>
-                  ))}
-                </div>
               )}
+              <button onClick={() => setShowWrongBook(false)} className="p-1 hover:bg-white rounded-lg">
+                <X size={16} className="text-red-400" />
+              </button>
             </div>
+          </div>
+          <div className="max-h-[35vh] overflow-y-auto px-4 py-2 space-y-2">
+            {loadingWrong ? (
+              <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-surface-300" /></div>
+            ) : wrongAnswers.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-xs text-surface-400">暂无错题记录</p>
+              </div>
+            ) : (
+              wrongAnswers.map((wa: any, i: number) => (
+                <div key={wa.id || i} className="p-2.5 rounded-lg border border-red-100 bg-white relative group text-xs">
+                  <p className="text-surface-600 mb-1 pr-6">Q{wa.question}</p>
+                  <div className="flex gap-3">
+                    <span className="text-red-500">你的: {wa.user_answer || '(未作答)'}</span>
+                    <span className="text-green-600">正确: {wa.correct_answer}</span>
+                  </div>
+                  {wa.explanation && (
+                    <p className="text-surface-400 mt-0.5">💡 {wa.explanation}</p>
+                  )}
+                  <button
+                    onClick={() => deleteWrongAnswer(wa.id)}
+                    disabled={deletingWrong === wa.id}
+                    className="absolute top-2 right-2 p-1 rounded bg-white border border-surface-200 text-surface-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {deletingWrong === wa.id ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={11} />}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      {/* ── 内联出题结果 ── */}
+      {quizCompleted && inlineQuiz && (
+        <div className="border-t border-primary-200 bg-primary-50/20 mt-3">
+          <div className="px-4 py-3 space-y-3 max-h-[50vh] overflow-y-auto">
+            <div className="text-center mb-2">
+              <span className="text-lg font-bold text-primary-500">
+                {Object.entries(quizUserAnswers).filter(([pid, pans]) => {
+                  const pq = inlineQuiz.find(pqq => pqq.id === pid)
+                  return pq && pans.trim().toLowerCase() === pq.answer.trim().toLowerCase()
+                }).length}/{inlineQuiz.length}
+              </span>
+              <p className="text-xs text-surface-400 mt-0.5">完成练习</p>
+            </div>
+            {inlineQuiz.map((pq, pi) => {
+              const ua = quizUserAnswers[pq.id] || '(未作答)'
+              const ok = ua.trim().toLowerCase() === pq.answer.trim().toLowerCase()
+              return (
+                <div key={pq.id} className="bg-white rounded-lg border border-surface-200 p-2.5 text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-surface-600">第 {pi + 1} 题</span>
+                    {ok ? <Check size={14} className="text-green-500" /> : <X size={14} className="text-red-400" />}
+                  </div>
+                  <p className="text-surface-700 mb-1">{pq.question}</p>
+                  <div className="space-y-0.5">
+                    <p className="text-surface-400">你的答案: <span className={ok ? 'text-green-600' : 'text-red-500'}>{ua}</span></p>
+                    {!ok && <p className="text-green-600">正确答案: {pq.answer}</p>}
+                    <p className="text-surface-400">💡 {pq.explanation}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="px-4 py-2 border-t border-surface-200 flex gap-2">
+            <button onClick={resetQuiz} className="flex-1 py-2 bg-primary-500 text-white text-xs rounded-lg font-medium hover:bg-primary-600">再来一组</button>
+            <button onClick={() => { resetQuiz(); setShowWrongBook(true); openWrongBook() }} className="flex-1 py-2 border border-red-200 text-red-500 text-xs rounded-lg font-medium hover:bg-red-50 flex items-center justify-center gap-1">
+              <AlertTriangle size={11} /> 查看错题本
+            </button>
           </div>
         </div>
       )}
 
-      {/* 出题确认弹窗 — 点击"开始出题"后弹出，让用户确认参数 */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowConfirmModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">确认出题</h3>
-            <div className="space-y-3 text-sm text-surface-600 mb-6">
-              <div className="flex justify-between">
-                <span className="text-surface-400">已选知识点</span>
-                <span className="font-medium">{selected.size} 个</span>
+      {/* ── 内联答题界面 ── */}
+      {inlineQuiz && !quizCompleted && !quizGenerating && (
+        (() => {
+          const cq = inlineQuiz[quizCurrentIndex]
+          if (!cq) return null
+          const tot = inlineQuiz.length
+          const ansCnt = Object.keys(quizUserAnswers).length
+          return (
+            <div className="border-t border-primary-200 bg-white mt-3">
+              <div className="flex items-center gap-3 px-4 py-2 border-b border-surface-100">
+                <button onClick={resetQuiz} className="text-xs text-surface-400 hover:text-red-500">✕ 退出</button>
+                <div className="flex-1 h-1.5 bg-surface-100 rounded-full">
+                  <div className="h-full bg-primary-500 rounded-full transition-[width] duration-300" style={{ width: `${(ansCnt / tot) * 100}%` }} />
+                </div>
+                <span className="text-[11px] text-surface-400">{quizCurrentIndex + 1}/{tot}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-surface-400">题型</span>
-                <span className="font-medium">{quizType === 'choice' ? '选择题' : quizType === 'fill' ? '填空题' : '混合'}</span>
+              <div className="px-4 py-4 max-h-[55vh] overflow-y-auto">
+                <span className="inline-block text-[11px] px-2 py-0.5 rounded-full font-medium mb-2 bg-surface-100 text-surface-500">
+                  {cq.type === 'choice' ? '选择题' : '填空题'}
+                </span>
+                <h3 className="text-sm font-semibold text-surface-800 mb-4">{cq.question}</h3>
+                {cq.type === 'choice' && cq.options?.map((opt, oi) => {
+                  const ol = opt.charAt(0)
+                  const sel = quizUserAnswers[cq.id] === ol
+                  const rev = quizShowResult[cq.id]
+                  const cor = ol === cq.answer
+                  return (
+                    <button key={oi} onClick={() => handleQuizAnswer(ol)} disabled={rev}
+                      className={`w-full text-left p-2.5 rounded-lg border-2 transition duration-150 text-sm mb-2 ${
+                        rev && cor ? 'border-green-400 bg-green-50' :
+                        rev && sel && !cor ? 'border-red-300 bg-red-50' :
+                        sel ? 'border-primary-400 bg-primary-50' :
+                        'border-surface-200 hover:border-surface-300'
+                      }`}><span className="font-medium">{opt}</span></button>
+                  )
+                })}
+                {cq.type === 'fill' && (
+                  <div className="space-y-2">
+                    <input type="text" value={quizFillInput} onChange={e => setQuizFillInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && quizFillInput.trim() && !quizShowResult[cq.id]) handleQuizAnswer(quizFillInput.trim()) }}
+                      disabled={quizShowResult[cq.id]} placeholder="输入你的答案..."
+                      className="w-full px-3 py-2 border-2 border-surface-200 rounded-lg text-sm focus:border-primary-500 outline-none disabled:bg-surface-50" autoFocus />
+                    {!quizShowResult[cq.id] && (
+                      <button onClick={() => quizFillInput.trim() && handleQuizAnswer(quizFillInput.trim())} disabled={!quizFillInput.trim()}
+                        className="w-full py-2 bg-primary-500 text-white rounded-lg font-medium hover:bg-primary-600 disabled:opacity-50 text-sm">提交答案</button>
+                    )}
+                  </div>
+                )}
+                {quizShowResult[cq.id] && (
+                  <div className={`mt-3 p-3 rounded-lg ${quizUserAnswers[cq.id]?.trim().toLowerCase() === cq.answer.trim().toLowerCase() ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      {quizUserAnswers[cq.id]?.trim().toLowerCase() === cq.answer.trim().toLowerCase() ? (
+                        <><Check size={16} className="text-green-500" /><span className="text-sm font-medium text-green-700">正确！</span></>
+                      ) : (
+                        <><X size={16} className="text-red-400" /><span className="text-sm font-medium text-red-600">错误</span></>
+                      )}
+                    </div>
+                    {quizUserAnswers[cq.id]?.trim().toLowerCase() !== cq.answer.trim().toLowerCase() && (
+                      <p className="text-sm text-green-600 mb-1">正确答案：{cq.answer}</p>
+                    )}
+                    <p className="text-xs text-surface-500">💡 {cq.explanation}</p>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-surface-400">题数</span>
-                <span className="font-medium">{quizCount === 0 ? '不限' : `${quizCount} 题`}</span>
+              <div className="px-4 py-2 border-t border-surface-200 flex items-center gap-3">
+                <button onClick={handleQuizPrev} disabled={quizCurrentIndex === 0} className="p-2 border border-surface-200 rounded-lg hover:bg-surface-50 disabled:opacity-30"><ChevronLeft size={16} /></button>
+                <div className="flex-1 flex justify-center gap-1">
+                  {inlineQuiz.map((qq, qi) => {
+                    const a = quizUserAnswers[qq.id]
+                    const c = a && a.trim().toLowerCase() === qq.answer.trim().toLowerCase()
+                    return (
+                      <button key={qq.id} onClick={() => { setQuizCurrentIndex(qi); setQuizFillInput('') }}
+                        className={`w-6 h-6 rounded-full text-[11px] font-medium transition ${
+                          qi === quizCurrentIndex ? 'bg-primary-500 text-white' :
+                          a ? (c ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500') :
+                          'bg-surface-100 text-surface-400'
+                        }`}>{qi + 1}</button>
+                    )
+                  })}
+                </div>
+                <button onClick={handleQuizNext} disabled={!quizShowResult[cq.id]} className="p-2 border border-surface-200 rounded-lg hover:bg-surface-50 disabled:opacity-30"><ChevronRight size={16} /></button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50 text-sm">取消</button>
-              <button onClick={confirmStart} className="flex-1 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 text-sm">确认出题</button>
-            </div>
-          </div>
-        </div>
+          )
+        })()
       )}
     </div>
   )
