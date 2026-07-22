@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── 主题色系 CSS 变量 ─── */
+:root, [data-theme="blue"] {
+  --p-50: #eff6ff; --p-100: #dbeafe; --p-200: #bfdbfe; --p-300: #93c5fd;
+  --p-400: #60a5fa; --p-500: #3b82f6; --p-600: #2563eb; --p-700: #1d4ed8;
+  --p-800: #1e40af; --p-900: #1e3a8a;
+}
+[data-theme="purple"] {
+  --p-50: #faf5ff; --p-100: #f3e8ff; --p-200: #e9d5ff; --p-300: #d8b4fe;
+  --p-400: #a855f7; --p-500: #8b5cf6; --p-600: #7c3aed; --p-700: #6d28d9;
+  --p-800: #5b21b6; --p-900: #4c1d95;
+}
+[data-theme="orange"] {
+  --p-50: #fff7ed; --p-100: #ffedd5; --p-200: #fed7aa; --p-300: #fdba74;
+  --p-400: #fb923c; --p-500: #f97316; --p-600: #ea580c; --p-700: #c2410c;
+  --p-800: #9a3412; --p-900: #7c2d12;
+}
+[data-theme="green"] {
+  --p-50: #f0fdf4; --p-100: #dcfce7; --p-200: #bbf7d0; --p-300: #86efac;
+  --p-400: #4ade80; --p-500: #22c55e; --p-600: #16a34a; --p-700: #15803d;
+  --p-800: #166534; --p-900: #14532d;
+}
+[data-theme="pink"] {
+  --p-50: #fdf2f8; --p-100: #fce7f3; --p-200: #fbcfe8; --p-300: #f9a8d4;
+  --p-400: #f472b6; --p-500: #ec4899; --p-600: #db2777; --p-700: #be185d;
+  --p-800: #9d174d; --p-900: #831843;
+}
+
+/* 基础变量 */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-height: 56px;
+  --drawer-width: 280px;
+
+  /* 自定义 easing 曲线 — 比 CSS 内置值更有冲击力 */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* 全局 reset */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* ─── 通用按钮 press 反馈 ─── */
+@layer components {
+  .btn-press {
+    transition: transform 160ms var(--ease-out);
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ─── 聊天气泡动画 ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s var(--ease-out);
+}
+
+/* ─── 打字光标 ─── */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '▌';
+  animation: blink 1s infinite;
+}
+
+/* ─── 侧拉栏 ─── */
+.drawer-overlay {
+  @apply fixed inset-0 bg-black/40 z-40;
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out);
+}
+.drawer-overlay.open {
+  opacity: 1;
+}
+
+/* ─── 弹窗通用：覆盖层淡入 + 面板滑入 ─── */
+.modal-overlay {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out);
+}
+.modal-overlay.open {
+  opacity: 1;
+}
+
+.modal-sheet {
+  animation: modalSlideUp 250ms var(--ease-out) forwards;
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-sheet-center {
+  animation: modalScaleIn 200ms var(--ease-out) forwards;
+}
+@keyframes modalScaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ─── 底部面板 ─── */
+.bottom-sheet {
+  @apply fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 shadow-xl;
+  padding-bottom: var(--safe-bottom);
+  animation: slideUp 300ms var(--ease-out);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* ─── 卡片 stagger ─── */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: fadeInUp 300ms var(--ease-out) forwards;
+}
+
+/* ─── 无障碍：reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .modal-sheet,
+  .modal-sheet-center,
+  .bottom-sheet,
+  .stagger-item {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── 触屏安全：hover 仅对指针设备生效 ─── */
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover {
+    transform: translateY(-1px);
+  }
+  .hover-glow:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
