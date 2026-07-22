@@ -234,7 +234,7 @@ class PaymentConfirmResponse(BaseModel):
 
 class QuizGenerateRequest(BaseModel):
     question_type: str = Field(default="mixed", pattern="^(choice|fill|mixed)$")
-    count: int = Field(default=5, ge=3, le=10)
+    count: int = Field(default=5, ge=1, le=20)
     knowledge_point_ids: List[str] = []
 
 

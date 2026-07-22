@@ -594,9 +594,12 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                       </span>
                     )}
                   </h4>
-                  <p className="text-xs text-surface-500 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-surface-500 leading-relaxed">
                     {isFlipped ? card.back : card.front}
                   </p>
+                  {!isFlipped && (card.front.length > 120 || card.back.length > 120) && (
+                    <p className="text-xs text-surface-300 mt-0.5">点击翻转查看更多</p>
+                  )}
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex gap-1">
                       {card.tags.slice(0, 2).map(t => (
@@ -604,21 +607,27 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                       ))}
                     </div>
                     <div className="flex items-center gap-2">
-                      {isFlipped && card.document_id && (
+                      {/* 来源按钮 — 始终显示（不需翻转） */}
+                      {card.document_id ? (
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation()
                             const highlightParam = card.chunk_id ? `?highlight=${card.chunk_id}` : ''
-                            navigate(`/document/${card.document_id}/view${highlightParam}`)
+                            try {
+                              // 先验证文档是否存在
+                              const res = await apiClient.get(`/documents/${card.document_id}/status`)
+                              navigate(`/document/${card.document_id}/view${highlightParam}`)
+                            } catch {
+                              // 文档可能已被删除，静默降级
+                            }
                           }}
                           className="text-xs text-primary-500 hover:text-primary-700 flex items-center gap-0.5"
                           title={card.document_name ? `来源: ${card.document_name}` : '查看来源'}
-                        ><ExternalLink size={10} /> {card.document_name ? card.document_name : '来源'}</button>
+                        ><ExternalLink size={10} /> {card.document_name || '来源'}</button>
+                      ) : (
+                        <span className="text-xs text-surface-300 italic">无来源信息</span>
                       )}
-                      {isFlipped && !card.document_id && (
-                        <span className="text-xs text-surface-300 italic">来源信息缺失</span>
-                      )}
-                      <span className="text-xs text-surface-300">{isFlipped ? '背面' : '点击翻转'}</span>
+                      <span className="text-xs text-surface-300">{isFlipped ? '背面' : '正面'}</span>
                     </div>
                   </div>
                 </div>

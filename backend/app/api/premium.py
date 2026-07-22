@@ -92,18 +92,24 @@ async def get_knowledge_cards(
     )
     points = kp_result.scalars().all()
 
-    # 预加载文档名映射
+    # 预加载文档名映射 + 验证 document_id 是否仍然存在
     doc_ids = {kp.document_id for kp in points if kp.document_id}
     doc_names = {}
+    valid_doc_ids = set()
     if doc_ids:
         docs_result = await db.execute(
-            select(Document).where(Document.id.in_(doc_ids))
+            select(Document.id, Document.filename).where(Document.id.in_(doc_ids))
         )
-        for d in docs_result.scalars().all():
-            doc_names[d.id] = d.filename
+        for row in docs_result.fetchall():
+            doc_names[row[0]] = row[1]
+            valid_doc_ids.add(row[0])
 
     cards = []
     for i, kp in enumerate(points):
+        # 如果知识点引用的 document_id 对应的文档已不存在，清空引用
+        doc_id = kp.document_id if kp.document_id and kp.document_id in valid_doc_ids else ""
+        chunk_id = kp.chunk_id if doc_id else ""
+
         # 从 content 中还原 front/back：content 格式为 "**front**\n\nback"
         content = kp.content or ""
         front = ""
@@ -131,9 +137,9 @@ async def get_knowledge_cards(
             back=back,
             tags=tags if isinstance(tags, list) else [],
             knowledge_point_id=kp.id,
-            document_id=kp.document_id or "",
-            document_name=doc_names.get(kp.document_id, ""),
-            chunk_id=kp.chunk_id or "",
+            document_id=doc_id,
+            document_name=doc_names.get(doc_id, ""),
+            chunk_id=chunk_id,
         ))
 
     return KnowledgeCardsResponse(notebook_id=notebook_id, cards=cards)

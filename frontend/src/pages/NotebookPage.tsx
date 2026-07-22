@@ -467,12 +467,16 @@ export default function NotebookPage() {
                       className="bg-white rounded-lg p-2 border border-surface-200 text-xs cursor-pointer hover:border-primary-300"
                       onClick={() => {
                         if (r.chunk_id?.startsWith('kp_')) {
-                          // 知识点结果 → 跳转到对应笔记本的知识卡片 tab
-                          navigate(`/notebook/${id}`)
+                          // 知识点结果 → 切换到知识卡片 tab
+                          setActiveTab('cards')
+                          setSearchResults(null)
                         } else if (r.document_id) {
+                          // 文档结果 → 跳转到全文查看并高亮
                           navigate(`/document/${r.document_id}/view?highlight=${r.chunk_id}`)
                         } else {
-                          navigate(`/notebook/${id}`)
+                          // 无 document_id → 切换到文件 tab 并打开搜索结果所在文档
+                          setActiveTab('files')
+                          setSearchResults(null)
                         }
                       }}
                     >
@@ -740,6 +744,7 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
   const [quizFillInput, setQuizFillInput] = useState('')
   const [quizGenerating, setQuizGenerating] = useState(false)
   const [quizCompleted, setQuizCompleted] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
     if (!notebookId) return
@@ -776,20 +781,27 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
   const handleGenerateQuiz = async () => {
     const selectedKps = kps.filter(k => selected.has(k.id))
     setQuizGenerating(true)
+    setErrorMsg('')
     try {
       const res = await apiClient.post(`/notebooks/${notebookId}/quiz/generate`, {
         question_type: quizType,
-        count: quizCount,
+        count: quizCount === 0 ? 10 : quizCount,  // 不限 → 10 题
         knowledge_point_ids: selectedKps.map((k: any) => k.id),
       })
       const qs = res.data.questions || []
+      if (qs.length === 0) {
+        setErrorMsg('AI 未能生成题目，请检查知识点内容是否足够丰富')
+        return
+      }
       setInlineQuiz(qs)
       setQuizCurrentIndex(0)
       setQuizUserAnswers({})
       setQuizShowResult({})
       setQuizFillInput('')
       setQuizCompleted(false)
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.detail || '生成题目失败，请稍后重试')
+    }
     finally { setQuizGenerating(false) }
   }
 
@@ -910,18 +922,80 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
 
   return (
     <div className="px-4 py-3">
-      {/* 错题本入口 */}
+      {/* 错题本入口 — 移到顶部，更醒目 */}
       {Object.keys(wrongCounts).length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
+        <div className={`mb-4 rounded-xl border-2 transition-all duration-200 ${
+          showWrongBook ? 'border-red-400 bg-red-50/60' : 'border-red-200 bg-gradient-to-r from-red-50 to-orange-50'
+        }`}>
           <button
             onClick={openWrongBook}
-            className="px-3 py-2 text-sm bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 flex items-center gap-2 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
           >
-            <AlertTriangle size={14} /> 错题本
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                showWrongBook ? 'bg-red-500' : 'bg-red-100'
+              }`}>
+                <AlertTriangle size={18} className={showWrongBook ? 'text-white' : 'text-red-500'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-red-700">错题本</p>
+                <p className="text-xs text-red-500">
+                  {Object.keys(wrongCounts).length} 个知识点 · {Object.values(wrongCounts).reduce((a: number, b: number) => a + b, 0)} 道错题
+                </p>
+              </div>
+            </div>
+            <span className={`text-xs transition-transform ${showWrongBook ? 'rotate-180' : ''}`}>▼</span>
           </button>
-          <span className="text-xs text-surface-400">
-            {Object.keys(wrongCounts).length} 个知识点有错题记录
-          </span>
+
+          {/* 错题列表 — 展开时显示 */}
+          {showWrongBook && (
+            <div className="border-t border-red-200">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-red-100 bg-red-50/50">
+                <span className="text-xs font-semibold text-red-600">错题记录 ({wrongAnswers.length})</span>
+                <div className="flex items-center gap-2">
+                  {wrongAnswers.length > 0 && (
+                    <button
+                      onClick={deleteAllWrong}
+                      disabled={deletingWrong === '__all__'}
+                      className="px-2 py-1 text-xs bg-white text-red-500 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {deletingWrong === '__all__' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                      清空全部
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="max-h-[35vh] overflow-y-auto px-4 py-2 space-y-2">
+                {loadingWrong ? (
+                  <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-surface-300" /></div>
+                ) : wrongAnswers.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-xs text-surface-400">暂无错题记录</p>
+                  </div>
+                ) : (
+                  wrongAnswers.map((wa: any, i: number) => (
+                    <div key={wa.id || i} className="p-2.5 rounded-lg border border-red-100 bg-white relative group text-xs">
+                      <p className="text-surface-600 mb-1 pr-6">Q{wa.question}</p>
+                      <div className="flex gap-3">
+                        <span className="text-red-500">你的: {wa.user_answer || '(未作答)'}</span>
+                        <span className="text-green-600">正确: {wa.correct_answer}</span>
+                      </div>
+                      {wa.explanation && (
+                        <p className="text-surface-400 mt-0.5">💡 {wa.explanation}</p>
+                      )}
+                      <button
+                        onClick={() => deleteWrongAnswer(wa.id)}
+                        disabled={deletingWrong === wa.id}
+                        className="absolute top-2 right-2 p-1 rounded bg-white border border-surface-200 text-surface-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        {deletingWrong === wa.id ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={11} />}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1007,6 +1081,13 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
         </div>
       </div>
 
+      {/* 错误提示 */}
+      {errorMsg && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-sm text-red-600">
+          {errorMsg}
+        </div>
+      )}
+
       <button
         onClick={handleGenerateQuiz}
         disabled={selected.size === 0 || quizGenerating}
@@ -1016,60 +1097,6 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
         {quizGenerating ? '正在出题...' : `开始出题（${quizCount === 0 ? '不限' : `${quizCount} 题`} · ${selected.size} 个知识点）`}
       </button>
 
-      {/* 错题本上下分屏 — 点击错题本按钮后展开在下方 */}
-      {showWrongBook && (
-        <div className="border-t border-red-200 bg-red-50/30">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-red-100">
-            <div className="flex items-center gap-2 text-sm font-semibold text-red-700">
-              <AlertTriangle size={14} className="text-red-500" /> 错题本 ({wrongAnswers.length})
-            </div>
-            <div className="flex items-center gap-2">
-              {wrongAnswers.length > 0 && (
-                <button
-                  onClick={deleteAllWrong}
-                  disabled={deletingWrong === '__all__'}
-                  className="px-2 py-1 text-xs bg-white text-red-500 border border-red-200 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-1"
-                >
-                  {deletingWrong === '__all__' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                  清空全部
-                </button>
-              )}
-              <button onClick={() => setShowWrongBook(false)} className="p-1 hover:bg-white rounded-lg">
-                <X size={16} className="text-red-400" />
-              </button>
-            </div>
-          </div>
-          <div className="max-h-[35vh] overflow-y-auto px-4 py-2 space-y-2">
-            {loadingWrong ? (
-              <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-surface-300" /></div>
-            ) : wrongAnswers.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-xs text-surface-400">暂无错题记录</p>
-              </div>
-            ) : (
-              wrongAnswers.map((wa: any, i: number) => (
-                <div key={wa.id || i} className="p-2.5 rounded-lg border border-red-100 bg-white relative group text-xs">
-                  <p className="text-surface-600 mb-1 pr-6">Q{wa.question}</p>
-                  <div className="flex gap-3">
-                    <span className="text-red-500">你的: {wa.user_answer || '(未作答)'}</span>
-                    <span className="text-green-600">正确: {wa.correct_answer}</span>
-                  </div>
-                  {wa.explanation && (
-                    <p className="text-surface-400 mt-0.5">💡 {wa.explanation}</p>
-                  )}
-                  <button
-                    onClick={() => deleteWrongAnswer(wa.id)}
-                    disabled={deletingWrong === wa.id}
-                    className="absolute top-2 right-2 p-1 rounded bg-white border border-surface-200 text-surface-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    {deletingWrong === wa.id ? <Loader2 size={10} className="animate-spin" /> : <Trash2 size={11} />}
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
       {/* ── 内联出题结果 ── */}
       {quizCompleted && inlineQuiz && (
         <div className="border-t border-primary-200 bg-primary-50/20 mt-3">
@@ -1119,19 +1146,24 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
           const tot = inlineQuiz.length
           const ansCnt = Object.keys(quizUserAnswers).length
           return (
-            <div className="border-t border-primary-200 bg-white mt-3">
-              <div className="flex items-center gap-3 px-4 py-2 border-b border-surface-100">
-                <button onClick={resetQuiz} className="text-xs text-surface-400 hover:text-red-500">✕ 退出</button>
-                <div className="flex-1 h-1.5 bg-surface-100 rounded-full">
-                  <div className="h-full bg-primary-500 rounded-full transition-[width] duration-300" style={{ width: `${(ansCnt / tot) * 100}%` }} />
+            <div className="border-t border-primary-200 bg-white mt-3 rounded-b-2xl shadow-lg">
+              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-surface-100 bg-gradient-to-r from-primary-50 to-white">
+                <button onClick={resetQuiz} className="text-xs text-surface-400 hover:text-red-500 font-medium">✕ 退出</button>
+                <div className="flex-1 h-2 bg-surface-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary-500 rounded-full transition-[width] duration-500 ease-out" style={{ width: `${(ansCnt / tot) * 100}%` }} />
                 </div>
-                <span className="text-[11px] text-surface-400">{quizCurrentIndex + 1}/{tot}</span>
+                <span className="text-xs font-medium text-primary-600 whitespace-nowrap">{quizCurrentIndex + 1}/{tot}</span>
               </div>
-              <div className="px-4 py-4 max-h-[55vh] overflow-y-auto">
-                <span className="inline-block text-[11px] px-2 py-0.5 rounded-full font-medium mb-2 bg-surface-100 text-surface-500">
-                  {cq.type === 'choice' ? '选择题' : '填空题'}
-                </span>
-                <h3 className="text-sm font-semibold text-surface-800 mb-4">{cq.question}</h3>
+              <div className="px-4 py-5 max-h-[60vh] overflow-y-auto bg-white">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`inline-block text-[11px] px-2.5 py-1 rounded-full font-semibold ${
+                    cq.type === 'choice' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                  }`}>
+                    {cq.type === 'choice' ? '📝 选择题' : '✏️ 填空题'}
+                  </span>
+                  <span className="text-[11px] text-surface-400">{cq.knowledge_point_id ? '基于知识点' : ''}</span>
+                </div>
+                <h3 className="text-base font-semibold text-surface-800 mb-5 leading-relaxed">{cq.question}</h3>
                 {cq.type === 'choice' && cq.options?.map((opt, oi) => {
                   const ol = opt.charAt(0)
                   const sel = quizUserAnswers[cq.id] === ol
@@ -1139,59 +1171,71 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
                   const cor = ol === cq.answer
                   return (
                     <button key={oi} onClick={() => handleQuizAnswer(ol)} disabled={rev}
-                      className={`w-full text-left p-2.5 rounded-lg border-2 transition duration-150 text-sm mb-2 ${
-                        rev && cor ? 'border-green-400 bg-green-50' :
-                        rev && sel && !cor ? 'border-red-300 bg-red-50' :
-                        sel ? 'border-primary-400 bg-primary-50' :
-                        'border-surface-200 hover:border-surface-300'
-                      }`}><span className="font-medium">{opt}</span></button>
+                      className={`w-full text-left p-3.5 rounded-xl border-2 transition duration-200 text-sm mb-2.5 font-medium ${
+                        rev && cor ? 'border-green-400 bg-green-50 text-green-700' :
+                        rev && sel && !cor ? 'border-red-300 bg-red-50 text-red-600' :
+                        sel ? 'border-primary-400 bg-primary-50 text-primary-700 shadow-sm' :
+                        'border-surface-200 hover:border-primary-300 hover:bg-primary-50/50 text-surface-600'
+                      }`}><span className="text-base mr-2">{['A', 'B', 'C', 'D'][oi]}.</span>{opt.slice(2)}</button>
                   )
                 })}
                 {cq.type === 'fill' && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <input type="text" value={quizFillInput} onChange={e => setQuizFillInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && quizFillInput.trim() && !quizShowResult[cq.id]) handleQuizAnswer(quizFillInput.trim()) }}
                       disabled={quizShowResult[cq.id]} placeholder="输入你的答案..."
-                      className="w-full px-3 py-2 border-2 border-surface-200 rounded-lg text-sm focus:border-primary-500 outline-none disabled:bg-surface-50" autoFocus />
+                      className="w-full px-4 py-3 border-2 border-surface-200 rounded-xl text-base focus:border-primary-500 outline-none disabled:bg-surface-50" autoFocus />
                     {!quizShowResult[cq.id] && (
                       <button onClick={() => quizFillInput.trim() && handleQuizAnswer(quizFillInput.trim())} disabled={!quizFillInput.trim()}
-                        className="w-full py-2 bg-primary-500 text-white rounded-lg font-medium hover:bg-primary-600 disabled:opacity-50 text-sm">提交答案</button>
+                        className="w-full py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 disabled:opacity-50 text-sm shadow-sm">✓ 提交答案</button>
                     )}
                   </div>
                 )}
                 {quizShowResult[cq.id] && (
-                  <div className={`mt-3 p-3 rounded-lg ${quizUserAnswers[cq.id]?.trim().toLowerCase() === cq.answer.trim().toLowerCase() ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                    <div className="flex items-center gap-2 mb-1">
+                  <div className={`mt-4 p-4 rounded-xl ${
+                    quizUserAnswers[cq.id]?.trim().toLowerCase() === cq.answer.trim().toLowerCase()
+                      ? 'bg-green-50 border-2 border-green-200'
+                      : 'bg-red-50 border-2 border-red-200'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-2">
                       {quizUserAnswers[cq.id]?.trim().toLowerCase() === cq.answer.trim().toLowerCase() ? (
-                        <><Check size={16} className="text-green-500" /><span className="text-sm font-medium text-green-700">正确！</span></>
+                        <><Check size={20} className="text-green-500" /><span className="text-base font-semibold text-green-700">正确！</span></>
                       ) : (
-                        <><X size={16} className="text-red-400" /><span className="text-sm font-medium text-red-600">错误</span></>
+                        <><X size={20} className="text-red-400" /><span className="text-base font-semibold text-red-600">错误</span></>
                       )}
                     </div>
                     {quizUserAnswers[cq.id]?.trim().toLowerCase() !== cq.answer.trim().toLowerCase() && (
-                      <p className="text-sm text-green-600 mb-1">正确答案：{cq.answer}</p>
+                      <p className="text-sm text-green-600 mb-2 font-medium">✅ 正确答案：{cq.answer}</p>
                     )}
-                    <p className="text-xs text-surface-500">💡 {cq.explanation}</p>
+                    <div className="bg-white/60 rounded-lg p-3">
+                      <p className="text-xs text-surface-500">💡 {cq.explanation}</p>
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="px-4 py-2 border-t border-surface-200 flex items-center gap-3">
-                <button onClick={handleQuizPrev} disabled={quizCurrentIndex === 0} className="p-2 border border-surface-200 rounded-lg hover:bg-surface-50 disabled:opacity-30"><ChevronLeft size={16} /></button>
-                <div className="flex-1 flex justify-center gap-1">
+              <div className="px-4 py-3 border-t border-surface-200 bg-surface-50 flex items-center gap-3 rounded-b-2xl">
+                <button onClick={handleQuizPrev} disabled={quizCurrentIndex === 0}
+                  className="p-2.5 border border-surface-200 rounded-xl hover:bg-white disabled:opacity-30 transition-colors bg-white">
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex-1 flex justify-center gap-1.5">
                   {inlineQuiz.map((qq, qi) => {
                     const a = quizUserAnswers[qq.id]
                     const c = a && a.trim().toLowerCase() === qq.answer.trim().toLowerCase()
                     return (
                       <button key={qq.id} onClick={() => { setQuizCurrentIndex(qi); setQuizFillInput('') }}
-                        className={`w-6 h-6 rounded-full text-[11px] font-medium transition ${
-                          qi === quizCurrentIndex ? 'bg-primary-500 text-white' :
+                        className={`w-7 h-7 rounded-full text-[11px] font-bold transition-all duration-200 ${
+                          qi === quizCurrentIndex ? 'bg-primary-500 text-white shadow-md scale-110' :
                           a ? (c ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500') :
-                          'bg-surface-100 text-surface-400'
+                          'bg-surface-200 text-surface-400'
                         }`}>{qi + 1}</button>
                     )
                   })}
                 </div>
-                <button onClick={handleQuizNext} disabled={!quizShowResult[cq.id]} className="p-2 border border-surface-200 rounded-lg hover:bg-surface-50 disabled:opacity-30"><ChevronRight size={16} /></button>
+                <button onClick={handleQuizNext} disabled={!quizShowResult[cq.id]}
+                  className="p-2.5 bg-primary-500 text-white rounded-xl hover:bg-primary-600 disabled:opacity-30 transition-colors shadow-sm">
+                  <ChevronRight size={18} />
+                </button>
               </div>
             </div>
           )
