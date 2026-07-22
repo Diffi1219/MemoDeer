@@ -1226,9 +1226,15 @@ async def generate_knowledge_cards(
             if search_results:
                 best = search_results[0]
                 chunk_id = best.get("id", "")
-                meta = chunk_meta.get(chunk_id, {})
-                doc_id = meta.get("document_id", "")
-                doc_name = meta.get("document_name", "")
+                # 优先从向量搜索结果的 metadata 中获取（每条 chunk 存入时都有 document_id）
+                best_meta = best.get("metadata") or {}
+                doc_id = best_meta.get("document_id", "")
+                doc_name = best_meta.get("document_name", "")
+                # 如果 metadata 中缺失，回退到 chunk_meta 映射
+                if not doc_id:
+                    doc_id = chunk_meta.get(chunk_id, {}).get("document_id", "")
+                if not doc_name:
+                    doc_name = chunk_meta.get(chunk_id, {}).get("document_name", "")
         except Exception as e:
             print(f"[Cards] 来源定位失败 for '{item.get('title', '')}': {e}")
 

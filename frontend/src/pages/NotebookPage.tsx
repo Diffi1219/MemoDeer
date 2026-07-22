@@ -6,7 +6,8 @@ import { useUIStore } from '../store/uiStore'
 import { useAuthStore } from '../store/authStore'
 import {
   ArrowLeft, Menu, Search, MessageCircle, Upload, Loader2,
-  X, FileText, FlipVertical, GraduationCap, Crown, Send
+  X, FileText, FlipVertical, GraduationCap, Crown, Send,
+  AlertTriangle, ListChecks, Pencil, Shuffle, Trash2
 } from 'lucide-react'
 import FileTree from '../components/file-tree/FileTree'
 import { type TreeNode } from '../components/file-tree/FileTreeNode'
@@ -14,6 +15,7 @@ import MarkdownEditor from '../components/editor/MarkdownEditor'
 import ChatPanel from '../components/chat/ChatPanel'
 import PendingVectorizeBar from '../components/common/PendingVectorizeBar'
 import KnowledgePanel from '../components/common/KnowledgePanel'
+import PremiumGate from '../components/common/PremiumGate'
 import ReactMarkdown from 'react-markdown'
 
 interface PendingItem {
@@ -456,9 +458,10 @@ export default function NotebookPage() {
                         if (r.chunk_id?.startsWith('kp_')) {
                           // 知识点结果 → 跳转到对应笔记本的知识卡片 tab
                           navigate(`/notebook/${id}`)
-                        } else if (r.chunk_id) {
-                          const docId = r.chunk_id.split('-')[0]
-                          navigate(`/document/${docId}/view?highlight=${r.chunk_id}`)
+                        } else if (r.document_id) {
+                          navigate(`/document/${r.document_id}/view?highlight=${r.chunk_id}`)
+                        } else {
+                          navigate(`/notebook/${id}`)
                         }
                       }}
                     >
@@ -709,13 +712,28 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [quizCount, setQuizCount] = useState(5)
+  const [quizType, setQuizType] = useState<'choice' | 'fill' | 'mixed'>('mixed')
+
+  // 错题本
+  const [wrongCounts, setWrongCounts] = useState<Record<string, number>>({})
+  const [showWrongModal, setShowWrongModal] = useState(false)
+  const [wrongAnswers, setWrongAnswers] = useState<any[]>([])
+  const [loadingWrong, setLoadingWrong] = useState(false)
+  const [deletingWrong, setDeletingWrong] = useState<string | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   useEffect(() => {
     if (!notebookId) return
     setLoading(true)
-    apiClient.get(`/notebooks/${notebookId}/knowledge-points`)
-      .then(r => setKps(r.data || []))
-      .catch(() => setKps([]))
+    Promise.all([
+      apiClient.get(`/notebooks/${notebookId}/knowledge-points`),
+      apiClient.get(`/notebooks/${notebookId}/quiz/wrong-stats`),
+    ])
+      .then(([kpsRes, statsRes]) => {
+        setKps(kpsRes.data || [])
+        setWrongCounts(statsRes.data.wrong_counts || {})
+      })
+      .catch(() => { setKps([]) })
       .finally(() => setLoading(false))
   }, [notebookId])
 
@@ -736,8 +754,55 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
   }
 
   const handleStart = () => {
+    setShowConfirmModal(true)
+  }
+
+  const confirmStart = () => {
     const selectedKps = kps.filter(k => selected.has(k.id))
-    navigate(`/notebook/${notebookId}/quiz`, { state: { kps: selectedKps, count: quizCount } })
+    setShowConfirmModal(false)
+    navigate(`/notebook/${notebookId}/quiz`, { state: { kps: selectedKps, count: quizCount, quizType } })
+  }
+
+  // ── 错题本 ──
+  const openWrongBook = async () => {
+    if (!notebookId) return
+    setShowWrongModal(true)
+    setLoadingWrong(true)
+    try {
+      const r = await apiClient.get(`/notebooks/${notebookId}/quiz/wrong-answers`)
+      setWrongAnswers(r.data.wrong_answers || [])
+    } catch { setWrongAnswers([]) }
+    finally { setLoadingWrong(false) }
+  }
+
+  const deleteWrongAnswer = async (attemptId: string) => {
+    setDeletingWrong(attemptId)
+    try {
+      await apiClient.delete(`/notebooks/${notebookId}/quiz/wrong-answers/${attemptId}`)
+      setWrongAnswers(prev => prev.filter((a: any) => a.id !== attemptId))
+      fetchWrongStats()
+    } catch { /* ignore */ }
+    finally { setDeletingWrong(null) }
+  }
+
+  const deleteAllWrong = async () => {
+    const ids = wrongAnswers.map((a: any) => a.id)
+    if (ids.length === 0) return
+    setDeletingWrong('__all__')
+    try {
+      await apiClient.delete(`/notebooks/${notebookId}/quiz/wrong-answers`, { data: { ids } })
+      setWrongAnswers([])
+      fetchWrongStats()
+    } catch { /* ignore */ }
+    finally { setDeletingWrong(null) }
+  }
+
+  const fetchWrongStats = async () => {
+    if (!notebookId) return
+    try {
+      const r = await apiClient.get(`/notebooks/${notebookId}/quiz/wrong-stats`)
+      setWrongCounts(r.data.wrong_counts || {})
+    } catch { /* ignore */ }
   }
 
   if (loading) {
@@ -760,9 +825,47 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
 
   return (
     <div className="px-4 py-3">
+      {/* 错题本入口 */}
+      {Object.keys(wrongCounts).length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <button
+            onClick={openWrongBook}
+            className="px-3 py-2 text-sm bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 flex items-center gap-2 transition-colors"
+          >
+            <AlertTriangle size={14} /> 错题本
+          </button>
+          <span className="text-xs text-surface-400">
+            {Object.keys(wrongCounts).length} 个知识点有错题记录
+          </span>
+        </div>
+      )}
+
+      {/* 题型选择 */}
+      <div className="mb-4">
+        <p className="text-xs text-surface-400 mb-2">选择题型</p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { v: 'choice' as const, icon: ListChecks, label: '选择题' },
+            { v: 'fill' as const, icon: Pencil, label: '填空题' },
+            { v: 'mixed' as const, icon: Shuffle, label: '混合' },
+          ]).map(t => (
+            <button
+              key={t.v}
+              onClick={() => setQuizType(t.v)}
+              className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition duration-200 ${
+                quizType === t.v ? 'border-primary-400 bg-primary-50 text-primary-600' : 'border-surface-200 text-surface-400 hover:border-surface-300'
+              }`}
+            >
+              <t.icon size={20} />
+              <span className="text-xs font-medium">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-surface-700">
-          选择题出的知识点（{selected.size}/{kps.length}）
+          选择出的知识点（{selected.size}/{kps.length}）
         </h3>
         <button
           onClick={toggleAll}
@@ -772,7 +875,7 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
         </button>
       </div>
 
-      <div className="space-y-2 mb-6 max-h-[55vh] overflow-y-auto">
+      <div className="space-y-2 mb-6 max-h-[35vh] overflow-y-auto">
         {kps.map(kp => (
           <label
             key={kp.id}
@@ -788,8 +891,15 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
               onChange={() => toggle(kp.id)}
               className="mt-0.5 accent-primary-500"
             />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-surface-700">{kp.title}</p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-surface-700">{kp.title}</p>
+                {wrongCounts[kp.id] > 0 && (
+                  <span className="text-xs text-red-500 font-normal">
+                    ({wrongCounts[kp.id]}次答错)
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-surface-400 truncate">{kp.content}</p>
             </div>
           </label>
@@ -798,27 +908,118 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
 
       {/* 出题数量选择 */}
       <div className="mb-4">
-        <p className="text-xs text-surface-400 mb-2">出题数量（0-10，0 表示不限制）</p>
+        <p className="text-xs text-surface-400 mb-2">出题数量: {quizCount === 0 ? '不限' : `${quizCount} 题`}</p>
         <input
-          type="number"
+          type="range"
           min={0}
           max={10}
           value={quizCount}
-          onChange={e => {
-            const v = Math.max(0, Math.min(10, Number(e.target.value) || 0))
-            setQuizCount(v)
-          }}
-          className="w-full px-4 py-2.5 border border-surface-200 rounded-xl text-sm focus:border-primary-500 outline-none"
+          onChange={e => setQuizCount(Number(e.target.value))}
+          className="w-full accent-primary-500"
         />
+        <div className="flex justify-between text-xs text-surface-300">
+          <span>不限</span><span>5</span><span>10</span>
+        </div>
       </div>
 
       <button
         onClick={handleStart}
         disabled={selected.size === 0}
-        className="w-full py-3 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-40 transition-colors"
+        className="w-full py-3 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
       >
+        <GraduationCap size={18} />
         开始出题（{quizCount === 0 ? '不限' : `${quizCount} 题`} · {selected.size} 个知识点）
       </button>
+
+      {/* 错题本弹窗 */}
+      {showWrongModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+          onClick={() => setShowWrongModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
+              <div className="flex items-center gap-2 text-sm font-semibold text-surface-700">
+                <AlertTriangle size={16} className="text-red-500" /> 错题本
+              </div>
+              <div className="flex items-center gap-2">
+                {wrongAnswers.length > 0 && (
+                  <button
+                    onClick={deleteAllWrong}
+                    disabled={deletingWrong === '__all__'}
+                    className="px-2.5 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {deletingWrong === '__all__' ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                    清空全部
+                  </button>
+                )}
+                <button onClick={() => setShowWrongModal(false)} className="p-1 hover:bg-surface-100 rounded-lg">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {loadingWrong ? (
+                <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-surface-300" /></div>
+              ) : wrongAnswers.length === 0 ? (
+                <div className="text-center py-12 px-4">
+                  <AlertTriangle size={36} className="text-surface-200 mx-auto mb-2" />
+                  <p className="text-sm text-surface-400">暂无错题记录</p>
+                  <p className="text-xs text-surface-300 mt-1">完成出题练习后，答错的题目会出现在这里</p>
+                </div>
+              ) : (
+                <div className="px-4 py-3 space-y-3">
+                  {wrongAnswers.map((wa: any, i: number) => (
+                    <div key={wa.id || i} className="p-3 rounded-xl border border-surface-200 bg-surface-50 relative group">
+                      <p className="text-xs text-surface-500 mb-1.5 pr-8">Q: {wa.question}</p>
+                      <div className="flex gap-4 text-xs mb-1">
+                        <span className="text-red-500">你的答案: {wa.user_answer || '(未作答)'}</span>
+                        <span className="text-green-600">正确答案: {wa.correct_answer}</span>
+                      </div>
+                      {wa.explanation && (
+                        <p className="text-xs text-surface-400">💡 {wa.explanation}</p>
+                      )}
+                      <button
+                        onClick={() => deleteWrongAnswer(wa.id)}
+                        disabled={deletingWrong === wa.id}
+                        className="absolute top-3 right-3 p-1 rounded-lg bg-white border border-surface-200 text-surface-400 hover:text-red-500 hover:border-red-200 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        title="删除此错题"
+                      >
+                        {deletingWrong === wa.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 出题确认弹窗 — 点击"开始出题"后弹出，让用户确认参数 */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setShowConfirmModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-4">确认出题</h3>
+            <div className="space-y-3 text-sm text-surface-600 mb-6">
+              <div className="flex justify-between">
+                <span className="text-surface-400">已选知识点</span>
+                <span className="font-medium">{selected.size} 个</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-surface-400">题型</span>
+                <span className="font-medium">{quizType === 'choice' ? '选择题' : quizType === 'fill' ? '填空题' : '混合'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-surface-400">题数</span>
+                <span className="font-medium">{quizCount === 0 ? '不限' : `${quizCount} 题`}</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50 text-sm">取消</button>
+              <button onClick={confirmStart} className="flex-1 py-2.5 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 text-sm">确认出题</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

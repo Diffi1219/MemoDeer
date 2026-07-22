@@ -65,12 +65,13 @@ export default function QuizPage() {
     }
   }
 
-  // 自动生成（从弹窗预选了知识点和参数时直接出题）
+  // 从导航 state 中预填出题参数（不自动生成，让用户确认）
   useEffect(() => {
-    if (isPremium && selectedKps.length > 0) {
-      handleGenerate()
+    if (stateFromNav?.kps?.length > 0 && questions.length === 0 && !generating) {
+      if (stateFromNav.quizType) setQuizType(stateFromNav.quizType)
+      if (stateFromNav.count) setCount(stateFromNav.count)
     }
-  }, [isPremium])
+  }, [stateFromNav])
 
   if (!isPremium) {
     return (
@@ -271,8 +272,16 @@ export default function QuizPage() {
             </button>
           </div>
           {wrongQuestions.length > 0 && (
-            <p className="text-xs text-center text-surface-400 mt-3">✅ 错题已自动记录，可在笔记本"出题"页查看</p>
+            <p className="text-xs text-center text-surface-400 mt-3">✅ 错题已自动记录</p>
           )}
+          <div className="mt-3 text-center">
+            <button
+              onClick={() => navigate(`/notebook/${notebookId}`, { state: { openQuizTab: true } })}
+              className="text-xs text-primary-500 hover:underline"
+            >
+              查看错题本 & 再做一组
+            </button>
+          </div>
         </div>
       </div>
     )

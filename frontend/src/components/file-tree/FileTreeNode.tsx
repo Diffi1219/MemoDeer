@@ -159,8 +159,13 @@ export default function FileTreeNode({
           <span className="flex-1 min-w-0 truncate">
             {node.name}
             {node.needs_revectorize === 1 && (
-              <span className="ml-1.5 text-[10px] text-amber-500 font-medium" title="待向量化">
-                ⚠
+              <span className="ml-1.5 text-[10px] text-amber-500 font-medium" title="待向量化：内容已修改但未重新向量化">
+                ⚠待向量化
+              </span>
+            )}
+            {!isFolder && node.status && node.status !== 'completed' && (
+              <span className="ml-1.5 text-[10px] text-blue-400 font-medium">
+                {node.status === 'processing' || node.status === 'pending' ? '处理中' : node.status}
               </span>
             )}
           </span>

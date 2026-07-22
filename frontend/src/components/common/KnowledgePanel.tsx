@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Loader2, FlipVertical, Lightbulb, Sparkles, X as XIcon,
-  ExternalLink, Trash2, Edit3, Check, BookOpen, AlertTriangle, FileText
+  ExternalLink, Trash2, Edit3, Check, BookOpen, FileText
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import apiClient from '../../api/client'
@@ -57,9 +57,6 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
 
   // 错题
   const [wrongCounts, setWrongCounts] = useState<Record<string, number>>({})
-  const [showWrongModal, setShowWrongModal] = useState(false)
-  const [wrongAnswers, setWrongAnswers] = useState<any[]>([])
-  const [loadingWrong, setLoadingWrong] = useState(false)
 
   // 加载笔记本列表
   useEffect(() => {
@@ -79,11 +76,6 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
   // 加载已有卡片（从后端读取持久化数据）
   useEffect(() => {
     if (selectedNbId) { loadCards(); loadDocuments() }
-  }, [selectedNbId])
-
-  // 加载错题统计
-  useEffect(() => {
-    if (selectedNbId) fetchWrongStats()
   }, [selectedNbId])
 
   const allTags = [...new Set(cards.flatMap(c => c.tags))]
@@ -205,17 +197,6 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
     } catch { /* ignore */ }
   }
 
-  const openWrongBook = async () => {
-    if (!selectedNbId) return
-    setShowWrongModal(true)
-    setLoadingWrong(true)
-    try {
-      const r = await apiClient.get(`/notebooks/${selectedNbId}/quiz/wrong-answers`)
-      setWrongAnswers(r.data.wrong_answers || [])
-    } catch { setWrongAnswers([]) }
-    finally { setLoadingWrong(false) }
-  }
-
   // ── 编辑卡片 ──
   const startEdit = (card: CardItem, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -302,7 +283,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                           disabled={!isCompleted}
                           className={`w-full text-left p-3 rounded-xl border transition-colors flex items-center gap-3 ${
                             !isCompleted
-                              ? 'border-surface-100 bg-surface-50 opacity-50 cursor-not-allowed'
+                              ? 'border-surface-100 bg-surface-50 opacity-60 cursor-not-allowed'
                               : isSelected
                               ? 'border-primary-400 bg-primary-50'
                               : 'border-surface-200 hover:border-primary-200'
@@ -317,7 +298,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-surface-700 truncate">{doc.filename}</p>
                             <p className="text-xs text-surface-400">
-                              {doc.file_type?.toUpperCase()} · {isCompleted ? '已完成' : doc.status}
+                              {doc.file_type?.toUpperCase()} · {isCompleted ? '✅ 已完成' : doc.status === 'processing' ? '⏳ 处理中' : `⚠ 未向量化 · ${doc.status}`}
                             </p>
                           </div>
                         </button>
@@ -492,14 +473,6 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
             📚 知识卡片 ({cards.length}) · 口诀 ({mnemonics.length})
           </h3>
           <div className="flex items-center gap-2">
-            {Object.keys(wrongCounts).length > 0 && (
-              <button
-                onClick={openWrongBook}
-                className="px-2.5 py-1.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 flex items-center gap-1"
-              >
-                <AlertTriangle size={12} /> 错题本
-              </button>
-            )}
             {!propNotebookId && (
               <button
                 onClick={() => setShowNotebookPicker(true)}
@@ -631,22 +604,19 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                       ))}
                     </div>
                     <div className="flex items-center gap-2">
-                      {isFlipped && (
+                      {isFlipped && card.document_id && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            if (card.document_id) {
-                              const highlightParam = card.chunk_id ? `?highlight=${card.chunk_id}` : ''
-                              navigate(`/document/${card.document_id}/view${highlightParam}`)
-                            } else if (onGoToSource) {
-                              onGoToSource()
-                            } else {
-                              navigate(`/notebook/${selectedNbId}`)
-                            }
+                            const highlightParam = card.chunk_id ? `?highlight=${card.chunk_id}` : ''
+                            navigate(`/document/${card.document_id}/view${highlightParam}`)
                           }}
                           className="text-xs text-primary-500 hover:text-primary-700 flex items-center gap-0.5"
                           title={card.document_name ? `来源: ${card.document_name}` : '查看来源'}
                         ><ExternalLink size={10} /> {card.document_name ? card.document_name : '来源'}</button>
+                      )}
+                      {isFlipped && !card.document_id && (
+                        <span className="text-xs text-surface-300 italic">来源信息缺失</span>
                       )}
                       <span className="text-xs text-surface-300">{isFlipped ? '背面' : '点击翻转'}</span>
                     </div>
@@ -702,62 +672,17 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
               <div className="flex gap-1">
                 {previewCard.tags.map(t => <span key={t} className="text-xs px-2 py-0.5 bg-surface-100 text-surface-400 rounded-full">{t}</span>)}
               </div>
-              <button
-                onClick={() => {
-                  setPreviewCard(null)
-                  if (previewCard.document_id) {
+              {previewCard.document_id ? (
+                <button
+                  onClick={() => {
+                    setPreviewCard(null)
                     const highlightParam = previewCard.chunk_id ? `?highlight=${previewCard.chunk_id}` : ''
                     navigate(`/document/${previewCard.document_id}/view${highlightParam}`)
-                  } else if (onGoToSource) {
-                    onGoToSource()
-                  } else {
-                    navigate(`/notebook/${selectedNbId}`)
-                  }
-                }}
-                className="w-full py-2.5 bg-primary-500 text-white text-sm rounded-xl font-medium hover:bg-primary-600 flex items-center justify-center gap-2"
-              ><ExternalLink size={14} /> {previewCard.document_name ? `查看原文: ${previewCard.document_name}` : '查看笔记本原文'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 错题本弹窗 */}
-      {showWrongModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
-          onClick={() => setShowWrongModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
-              <div className="flex items-center gap-2 text-sm font-semibold text-surface-700">
-                <AlertTriangle size={16} className="text-red-500" /> 错题本
-              </div>
-              <button onClick={() => setShowWrongModal(false)} className="p-1 hover:bg-surface-100 rounded-lg">
-                <XIcon size={18} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {loadingWrong ? (
-                <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-surface-300" /></div>
-              ) : wrongAnswers.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <AlertTriangle size={36} className="text-surface-200 mx-auto mb-2" />
-                  <p className="text-sm text-surface-400">暂无错题记录</p>
-                  <p className="text-xs text-surface-300 mt-1">完成出题练习后，答错的题目会出现在这里</p>
-                </div>
+                  }}
+                  className="w-full py-2.5 bg-primary-500 text-white text-sm rounded-xl font-medium hover:bg-primary-600 flex items-center justify-center gap-2"
+                ><ExternalLink size={14} /> {previewCard.document_name ? `查看原文: ${previewCard.document_name}` : '查看原文'}</button>
               ) : (
-                <div className="px-4 py-3 space-y-3">
-                  {wrongAnswers.map((wa: any, i: number) => (
-                    <div key={wa.id || i} className="p-3 rounded-xl border border-surface-200 bg-surface-50">
-                      <p className="text-xs text-surface-500 mb-1">Q: {wa.question}</p>
-                      <div className="flex gap-4 text-xs">
-                        <span className="text-red-500">你的答案: {wa.user_answer || '(未作答)'}</span>
-                        <span className="text-green-600">正确答案: {wa.correct_answer}</span>
-                      </div>
-                      {wa.explanation && (
-                        <p className="text-xs text-surface-400 mt-1">💡 {wa.explanation}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-surface-400 text-center italic">来源信息缺失，无法跳转到原始文档</p>
               )}
             </div>
           </div>
