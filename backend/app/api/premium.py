@@ -105,10 +105,17 @@ async def get_knowledge_cards(
             valid_doc_ids.add(row[0])
 
     cards = []
+    db_cleanup_needed = False
     for i, kp in enumerate(points):
         # 如果知识点引用的 document_id 对应的文档已不存在，清空引用
         doc_id = kp.document_id if kp.document_id and kp.document_id in valid_doc_ids else ""
         chunk_id = kp.chunk_id if doc_id else ""
+
+        # 自动清理：引用无效文档的知识点，清空其 document_id/chunk_id
+        if kp.document_id and kp.document_id not in valid_doc_ids:
+            kp.document_id = None
+            kp.chunk_id = None
+            db_cleanup_needed = True
 
         # 从 content 中还原 front/back：content 格式为 "**front**\n\nback"
         content = kp.content or ""
@@ -141,6 +148,9 @@ async def get_knowledge_cards(
             document_name=doc_names.get(doc_id, ""),
             chunk_id=chunk_id,
         ))
+
+    if db_cleanup_needed:
+        await db.flush()
 
     return KnowledgeCardsResponse(notebook_id=notebook_id, cards=cards)
 

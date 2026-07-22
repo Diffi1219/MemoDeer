@@ -14,7 +14,7 @@ from app.services.llm_service import llm_service
 
 # RAG 距离阈值：BGE 余弦距离 ∈ [0, 2]，越小越相关
 # 0.5 以下 = 高相关，0.5~0.8 = 中等相关，> 0.8 = 弱相关
-RAG_DISTANCE_THRESHOLD = 0.65
+RAG_DISTANCE_THRESHOLD = 0.85
 
 
 async def process_document(db: AsyncSession, document: Document):
@@ -1196,21 +1196,35 @@ async def generate_knowledge_cards(
         return []
 
     # 先收集旧知识点的 ID，用于新数据写入成功后再清理
-    # 如果指定了 document_ids，只清理这些文档关联的旧知识点，保留其他文档的卡片
+    # 构建有效文档 ID 集合
+    valid_doc_ids = {doc.id for doc in documents}
+    valid_doc_names = {doc.id: doc.filename for doc in documents}
+
+    # 收集需要清理的旧知识点 ID
     if document_ids:
+        # 清理指定文档关联的旧知识点
         old_points_result = await db.execute(
             select(KnowledgePoint).where(
                 KnowledgePoint.notebook_id == notebook_id,
                 KnowledgePoint.document_id.in_(document_ids)
             )
         )
+        old_point_ids = [p.id for p in old_points_result.scalars().all()]
+        # 同时清理引用无效文档（已被删除）的孤立知识点
+        all_result = await db.execute(
+            select(KnowledgePoint).where(
+                KnowledgePoint.notebook_id == notebook_id
+            )
+        )
+        for p in all_result.scalars().all():
+            if p.document_id and p.document_id not in valid_doc_ids:
+                old_point_ids.append(p.id)
     else:
         old_points_result = await db.execute(
             select(KnowledgePoint).where(KnowledgePoint.notebook_id == notebook_id)
         )
-    old_point_ids = [p.id for p in old_points_result.scalars().all()]
+        old_point_ids = [p.id for p in old_points_result.scalars().all()]
 
-    new_point_ids = []
     for item in cards:
         kp_id = uuid.uuid4().hex
         new_point_ids.append(kp_id)
@@ -1225,16 +1239,29 @@ async def generate_knowledge_cards(
             search_results = vector_store.search(notebook_id, query_embedding, top_k=1)
             if search_results:
                 best = search_results[0]
-                chunk_id = best.get("id", "")
-                # 优先从向量搜索结果的 metadata 中获取（每条 chunk 存入时都有 document_id）
+                found_chunk_id = best.get("id", "")
                 best_meta = best.get("metadata") or {}
-                doc_id = best_meta.get("document_id", "")
-                doc_name = best_meta.get("document_name", "")
-                # 如果 metadata 中缺失，回退到 chunk_meta 映射
-                if not doc_id:
-                    doc_id = chunk_meta.get(chunk_id, {}).get("document_id", "")
-                if not doc_name:
-                    doc_name = chunk_meta.get(chunk_id, {}).get("document_name", "")
+                found_doc_id = best_meta.get("document_id", "")
+                found_doc_name = best_meta.get("document_name", "")
+                # 回退到 chunk_meta 映射
+                if not found_doc_id:
+                    found_doc_id = chunk_meta.get(found_chunk_id, {}).get("document_id", "")
+                if not found_doc_name:
+                    found_doc_name = chunk_meta.get(found_chunk_id, {}).get("document_name", "")
+                # 验证 document_id 是否属于当前笔记本的有效文档
+                if found_doc_id and found_doc_id in valid_doc_ids:
+                    doc_id = found_doc_id
+                    chunk_id = found_chunk_id
+                    doc_name = found_doc_name
+                else:
+                    # 向量搜索返回的文档不在当前笔记本中（可能已删除），
+                    # 尝试匹配到当前笔记本中有相同 chunk 内容的文档
+                    if found_chunk_id and found_chunk_id in chunk_meta:
+                        meta = chunk_meta[found_chunk_id]
+                        if meta.get("document_id") in valid_doc_ids:
+                            doc_id = meta["document_id"]
+                            chunk_id = found_chunk_id
+                            doc_name = meta.get("document_name", "")
         except Exception as e:
             print(f"[Cards] 来源定位失败 for '{item.get('title', '')}': {e}")
 

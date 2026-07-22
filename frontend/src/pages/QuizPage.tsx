@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Loader2, Check, X as XIcon, ChevronLeft, ChevronRight, GraduationCap, ListChecks, Pencil, Shuffle } from 'lucide-react'
+import { ArrowLeft, Loader2, Check, X as XIcon, ChevronLeft, ChevronRight, GraduationCap, ListChecks, Pencil, Shuffle, AlertTriangle } from 'lucide-react'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import PremiumGate from '../components/common/PremiumGate'
@@ -39,6 +39,16 @@ export default function QuizPage() {
   const [error, setError] = useState('')
   const [fillInput, setFillInput] = useState('')
 
+  // 从 NotebookPage 导航过来时自动开始出题
+  useEffect(() => {
+    if (stateFromNav?.kps?.length > 0 && questions.length === 0 && !generating) {
+      if (stateFromNav.quizType) setQuizType(stateFromNav.quizType)
+      if (stateFromNav.count) setCount(stateFromNav.count)
+      // 立即生成，不延迟
+      handleGenerate()
+    }
+  }, [stateFromNav])
+
   // 生成题目
   const handleGenerate = async () => {
     setGenerating(true)
@@ -64,14 +74,6 @@ export default function QuizPage() {
       setGenerating(false)
     }
   }
-
-  // 从导航 state 中预填出题参数（不自动生成，让用户确认）
-  useEffect(() => {
-    if (stateFromNav?.kps?.length > 0 && questions.length === 0 && !generating) {
-      if (stateFromNav.quizType) setQuizType(stateFromNav.quizType)
-      if (stateFromNav.count) setCount(stateFromNav.count)
-    }
-  }, [stateFromNav])
 
   if (!isPremium) {
     return (
@@ -227,6 +229,14 @@ export default function QuizPage() {
 
   // 结果页
   if (quizCompleted) {
+    // 错题按知识点分组
+    const wrongByKp = wrongQuestions.reduce((acc: Record<string, typeof wrongQuestions>, q) => {
+      const key = q.knowledge_point_id || 'other'
+      if (!acc[key]) acc[key] = []
+      acc[key].push(q)
+      return acc
+    }, {})
+
     return (
       <div className="h-full bg-white overflow-y-auto">
         <header className="flex items-center gap-3 px-4 py-3 border-b border-surface-200">
@@ -235,29 +245,111 @@ export default function QuizPage() {
           </button>
           <h1 className="font-semibold text-lg">练习结果</h1>
         </header>
-        <div className="max-w-lg mx-auto px-4 py-8">          <div className="text-center mb-8">
-            <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-3">
-              <span className="text-3xl font-bold text-primary-500">{correctCount}/{totalQuestions}</span>
+        <div className="max-w-lg mx-auto px-4 py-8 pb-24">
+          <div className="text-center mb-8">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 ${
+              correctCount === totalQuestions ? 'bg-green-50' : correctCount >= totalQuestions / 2 ? 'bg-primary-50' : 'bg-red-50'
+            }`}>
+              <span className={`text-3xl font-bold ${
+                correctCount === totalQuestions ? 'text-green-500' : correctCount >= totalQuestions / 2 ? 'text-primary-500' : 'text-red-500'
+              }`}>{correctCount}/{totalQuestions}</span>
             </div>
             <p className="text-lg font-semibold text-surface-800">
               {correctCount === totalQuestions ? '🎉 全部正确！' : correctCount >= totalQuestions / 2 ? '👍 继续加油！' : '📚 需要多复习哦'}
             </p>
+            {wrongQuestions.length > 0 && (
+              <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-xl">
+                <AlertTriangle size={16} className="text-red-500" />
+                <span className="text-sm font-medium text-red-600">
+                  {wrongQuestions.length} 道错题已自动记录到错题本
+                </span>
+              </div>
+            )}
           </div>
-          <div className="space-y-3 mb-6">
+
+          {/* 错题集中展示 — 按知识点分组 */}
+          {wrongQuestions.length > 0 && (
+            <div className="mb-6 rounded-2xl border-2 border-red-200 bg-gradient-to-b from-red-50/60 to-white overflow-hidden">
+              <div className="px-4 py-3 border-b border-red-100 bg-red-50 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-red-500" />
+                <h3 className="text-sm font-bold text-red-700">错题回顾</h3>
+                <span className="text-xs text-red-400 ml-auto">{wrongQuestions.length} 题答错</span>
+              </div>
+              <div className="px-4 py-3 space-y-4">
+                {Object.entries(wrongByKp).map(([kpId, items]) => {
+                  const kpTitle = kpId !== 'other'
+                    ? selectedKps.find((k: any) => k.id === kpId)?.title || kpId.slice(0, 8)
+                    : '其他'
+                  return (
+                    <div key={kpId} className="rounded-xl border border-red-100 bg-white overflow-hidden">
+                      <div className="px-3 py-2 bg-red-50/50 border-b border-red-100">
+                        <span className="text-xs font-semibold text-red-600">📌 {kpTitle}</span>
+                        <span className="text-xs text-red-400 ml-1">({items.length} 题)</span>
+                      </div>
+                      {items.map((q, i) => {
+                        const userAns = userAnswers[q.id] || '(未作答)'
+                        const qIndex = questions.findIndex(qq => qq.id === q.id)
+                        return (
+                          <div key={q.id} className="p-3 border-b border-red-50 last:border-b-0 text-xs">
+                            <div className="flex items-start gap-2">
+                              <span className="text-[10px] font-bold text-red-400 bg-red-50 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                {qIndex >= 0 ? qIndex + 1 : i + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-surface-700 mb-1 font-medium">Q: {q.question}</p>
+                                <div className="flex gap-3 flex-wrap">
+                                  <span className="text-red-500 font-medium">你的答案: {userAns}</span>
+                                  <span className="text-green-600 font-medium">正确答案: {q.answer}</span>
+                                </div>
+                                <p className="text-surface-400 mt-1">💡 {q.explanation}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+              {/* 针对错题再练 */}
+              <div className="px-4 py-3 border-t border-red-100 bg-red-50/50">
+                <button
+                  onClick={() => {
+                    // 提取错题关联的知识点 ID，重新导航到 QuizPage 只针对这些知识点出题
+                    const wrongKpIds = [...new Set(wrongQuestions.map(q => q.knowledge_point_id).filter(Boolean))]
+                    const wrongKps = wrongKpIds.length > 0
+                      ? selectedKps.filter((k: any) => wrongKpIds.includes(k.id))
+                      : selectedKps
+                    navigate(`/notebook/${notebookId}/quiz`, {
+                      state: { kps: wrongKps.length > 0 ? wrongKps : selectedKps, count: Math.min(wrongQuestions.length, 10), quizType },
+                      replace: true,
+                    })
+                  }}
+                  className="w-full py-2.5 bg-red-500 text-white text-sm rounded-xl font-medium hover:bg-red-600 flex items-center justify-center gap-2"
+                >
+                  <Shuffle size={14} /> 针对错题再练一组
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 全部题目概览 */}
+          <h4 className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">全部题目</h4>
+          <div className="space-y-2 mb-6">
             {questions.map((q, i) => {
               const userAns = userAnswers[q.id] || '(未作答)'
               const isCorrect = userAns.trim().toLowerCase() === q.answer.trim().toLowerCase()
               return (
-                <div key={q.id} className="bg-white rounded-xl border border-surface-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-surface-600">第 {i + 1} 题</span>
-                    {isCorrect ? <Check size={18} className="text-green-500" /> : <XIcon size={18} className="text-red-400" />}
+                <div key={q.id} className={`rounded-xl border p-3 ${isCorrect ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-surface-500">第 {i + 1} 题</span>
+                    {isCorrect ? <Check size={16} className="text-green-500" /> : <XIcon size={16} className="text-red-400" />}
                   </div>
-                  <p className="text-sm text-surface-700 mb-2">{q.question}</p>
-                  <div className="text-xs space-y-1">
+                  <p className="text-sm text-surface-700 mb-1">{q.question}</p>
+                  <div className="text-xs space-y-0.5">
                     <p className="text-surface-400">你的答案: <span className={isCorrect ? 'text-green-600' : 'text-red-500'}>{userAns}</span></p>
                     {!isCorrect && <p className="text-green-600">正确答案: {q.answer}</p>}
-                    <p className="text-surface-400 mt-1">💡 {q.explanation}</p>
+                    <p className="text-surface-400">💡 {q.explanation}</p>
                   </div>
                 </div>
               )
@@ -271,15 +363,12 @@ export default function QuizPage() {
               返回笔记本
             </button>
           </div>
-          {wrongQuestions.length > 0 && (
-            <p className="text-xs text-center text-surface-400 mt-3">✅ 错题已自动记录</p>
-          )}
-          <div className="mt-3 text-center">
+          <div className="mt-4 text-center">
             <button
               onClick={() => navigate(`/notebook/${notebookId}`, { state: { openQuizTab: true } })}
               className="text-xs text-primary-500 hover:underline"
             >
-              查看错题本 & 再做一组
+              返回查看错题本
             </button>
           </div>
         </div>
