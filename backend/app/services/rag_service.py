@@ -434,7 +434,7 @@ async def stream_answer(
     full_answer = ""
 
     # 流式调用 DeepSeek V4-Pro
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=2048):
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
         full_answer += token
         yield _sse_token(token)
 
@@ -490,7 +490,7 @@ async def stream_answer_open(
 
     # 用 Pro 模型流式生成
     full_answer = ""
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=2048):
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
         full_answer += token
         yield _sse_token(token)
 
@@ -658,7 +658,7 @@ async def stream_answer_fallback(
     yield _sse_source("open")
 
     full_answer = ""
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=2048):
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
         full_answer += token
         yield _sse_token(token)
 
@@ -756,27 +756,43 @@ async def create_note_from_text(
 
 # ── 算法可视化提示词（三处问答 prompt 共用）──
 ALGO_VIS_PROMPT = """
-**算法可视化规则**：
-当用户询问任何算法（排序、搜索、图算法、动态规划、树遍历、字符串算法等）时，你必须除了文字解释和代码实现之外，还提供一个**完整的可交互 HTML 可视化演示**。
 
-HTML 演示要求：
-1. 使用 DOM 元素（div/span）或 Canvas 绘制算法过程的数据结构：
-   - 排序算法 → 彩色柱子（bar chart）
-   - 树结构 → 圆形节点 + SVG 连线
-   - 图算法 → 圆形节点 + 边
-   - 搜索算法 → 高亮定位的数组/列表元素
-   - 动态规划 → 网格/表格高亮 dp 状态
-2. 必须包含控制按钮：▶ 开始 / ⏸ 暂停 / 🔄 重置 / ⏭ 单步
-3. 用颜色明确区分状态：
-   - 蓝色(#3b82f6) = 默认/未处理
-   - 黄色(#eab308) = 当前正在比较/检查
-   - 红色(#ef4444) = 交换/移动中
-   - 绿色(#22c55e) = 已完成/已排好序
-4. 在演示区域旁显示当前执行步骤的文字说明
-5. 全部 CSS 和内联 JS 写在一个 HTML 文件中，不依赖外部库（不需要 D3.js 等）
-6. 使用 CSS 变量 `var(--algo-default)` `var(--algo-comparing)` `var(--algo-swapping)` `var(--algo-done)` 以适配明暗主题
-7. 响应式布局：在手机上也能够正常显示和操作
-8. 设计简洁现代，圆角、阴影、良好排版"""
+**算法可视化规则**：
+当用户询问任何算法（排序、搜索、图算法、动态规划、树遍历、字符串算法等）时，你必须除了文字解释和代码实现之外，还提供一个**交互式可视化演示的步骤数据**。
+
+使用 ```algo-viz 代码块输出结构化 JSON（不是 HTML）：
+
+```algo-viz
+{
+  "algorithm": "算法类型标识",
+  "array": [初始数据数组],
+  "steps": [
+    {"type": "compare", "i": 0, "j": 1, "desc": "比较 arr[0]=64 和 arr[1]=34"},
+    {"type": "swap", "i": 0, "j": 1, "desc": "64 > 34，交换两个位置"},
+    {"type": "sorted", "i": 6, "desc": "arr[6]=90 已到达最终位置"},
+    {"type": "done", "desc": "排序完成，所有元素有序"}
+  ]
+}
+```
+
+**algorithm 取值**：bubble-sort | selection-sort | insertion-sort | quick-sort | merge-sort | heap-sort | shell-sort | binary-search | linear-search | bfs | dfs | dijkstra | knapsack
+
+**step type 说明**：
+- **compare**: 正在比较 i 和 j 两个位置的元素（前端会用黄色高亮）
+- **swap**: 交换 i 和 j 两个位置的元素（前端会用红色动画显示交换）
+- **sorted**: 位置 i 的元素已到达最终排序位置（前端会用绿色标记）
+- **pivot**: 位置 i 是当前选定的基准元素（如快排的 pivot）
+- **done**: 算法执行完毕
+
+**要求**：
+1. array 长度 6-12，元素值在 5-99 之间，有一定随机性
+2. steps 必须覆盖算法的核心执行过程，每一步带中文描述
+3. 排序算法：必须包含 compare（比较）和 swap（交换）步骤
+4. 每趟结束时标记 sorted（已排好序的位置）
+5. 结束时必须包含 {"type": "done", "desc": "排序完成"}
+6. JSON 格式正确，不要添加额外说明，确保可以被 JSON.parse 解析
+7. 不要生成 HTML 代码，只生成 algo-viz JSON 数据"""
+
 
 # 导出状态消息函数供 API 层使用
 sse_status = _sse_status

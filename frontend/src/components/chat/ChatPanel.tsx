@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, FileText, Plus } from 'lucide-react'
 import apiClient, { getApiUrl } from '../../api/client'
 import GenUI from '../common/GenUI'
+import AlgoVisualizer from '../common/AlgoVisualizer'
 import { preprocessObsidian, CALLOUT_STYLES } from '../../utils/obsidian'
 import remarkMath from 'remark-math'
 import remarkGfm from 'remark-gfm'
@@ -54,7 +55,6 @@ function processInlineCitations(
 function HtmlBlock({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [height, setHeight] = useState(450)
-  const blobUrlRef = useRef<string | null>(null)
   const lastResizeTime = useRef(0)
 
   // resize 消息处理 — 250ms 防抖，避免动画触发无限增长
@@ -72,13 +72,9 @@ function HtmlBlock({ html }: { html: string }) {
     return () => window.removeEventListener('message', handler)
   }, [])
 
-  // 用 Blob URL 渲染，避免 srcdoc 嵌套 HTML 导致的脚本/结构冲突
-  useEffect(() => {
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current)
-    }
-
-    // 清理 LLM 可能生成的 <!DOCTYPE> <html> <head> <body> 外层标签，避免嵌套
+  // 用 srcdoc 渲染，sandbox 不设 allow-same-origin 也能正常加载
+  const wrappedHtml = useMemo(() => {
+    // 清理 LLM 可能生成的外层标签，避免 HTML 嵌套
     let content = html.trim()
     content = content.replace(/<!DOCTYPE\s+html[^>]*>/gi, '')
     const bodyMatch = content.match(/<body[^>]*>([\s\S]*)<\/body>/i)
@@ -90,7 +86,7 @@ function HtmlBlock({ html }: { html: string }) {
       content = content.replace(/<\/?body[^>]*>/gi, '')
     }
 
-    const wrappedHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6; padding: 16px; margin: 0; color: var(--s-800, #334155); background: var(--s-0, #fff); overflow-anchor: none; }
     table { border-collapse: collapse; width: 100%; margin: 8px 0; }
     th, td { border: 1px solid var(--s-200, #e2e8f0); padding: 8px 12px; text-align: left; }
@@ -114,25 +110,13 @@ function HtmlBlock({ html }: { html: string }) {
     function postH(){var h=document.body.scrollHeight;if(Math.abs(h-lastH)>5){lastH=h;parent.postMessage({type:'resize',height:h},'*');}}
     document.addEventListener('DOMContentLoaded',function(){setTimeout(postH,20);new ResizeObserver(postH).observe(document.body);});
   </script></head><body>${content}</body></html>`
-
-    const blob = new Blob([wrappedHtml], { type: 'text/html' })
-    blobUrlRef.current = URL.createObjectURL(blob)
-    if (iframeRef.current) {
-      iframeRef.current.src = blobUrlRef.current
-    }
-
-    return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current)
-        blobUrlRef.current = null
-      }
-    }
   }, [html])
 
   return (
     <iframe
       ref={iframeRef}
       sandbox="allow-scripts"
+      srcDoc={wrappedHtml}
       className="w-full border border-surface-200 rounded-xl my-2"
       style={{ height, minHeight: 320, maxHeight: 900, overflow: 'hidden' }}
     />
@@ -371,19 +355,28 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                         // 检查是否包含 html/genui 代码块 — 跳过 <pre> 包裹，避免 iframe 被 pre 格式化破坏
                         const codeChild = children?.props || {}
                         const className = codeChild.className || ''
-                        const match = /language-(\w+)/.exec(className)
-                        if (match && (match[1] === 'html' || match[1] === 'genui')) {
+                        const match = /language-([\w-]+)/.exec(className)
+                        if (match && (match[1] === 'html' || match[1] === 'genui' || match[1] === 'algo-viz')) {
                           return <>{children}</>
                         }
                         return <pre {...props}>{children}</pre>
                       },
                       code({ className, children, ...props }) {
-                        const match = /language-(\w+)/.exec(className || '')
+                        const match = /language-([\w-]+)/.exec(className || '')
                         if (match && match[1] === 'genui') {
                           try {
                             const raw = Array.isArray(children) ? children.join('') : String(children ?? '')
                             const data = JSON.parse(raw.trim())
                             return <GenUI data={data} />
+                          } catch {
+                            return <code {...props} className={className}>{children}</code>
+                          }
+                        }
+                        if (match && match[1] === 'algo-viz') {
+                          try {
+                            const raw = Array.isArray(children) ? children.join('') : String(children ?? '')
+                            const data = JSON.parse(raw.trim())
+                            return <AlgoVisualizer data={data} />
                           } catch {
                             return <code {...props} className={className}>{children}</code>
                           }
