@@ -84,7 +84,7 @@ export default function HomePage() {
 
       {/* 欢迎 */}
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-xl font-bold text-surface-900">
+        <h2 className="font-display text-2xl text-surface-900">
           你好，{user?.display_name || user?.username} 👋
         </h2>
         <p className="text-sm text-surface-400 mt-0.5">
@@ -144,7 +144,7 @@ export default function HomePage() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-200">
                 <BookOpen size={32} className="text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-surface-900 mb-1">
+              <h2 className="font-display text-3xl text-surface-900 mb-1">
                 欢迎使用 MemoDeer
               </h2>
               <p className="text-sm text-surface-400 max-w-xs mx-auto leading-relaxed">

@@ -32,11 +32,8 @@ export default function AboutPage() {
           <div className="w-20 h-20 bg-primary-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-200">
             <Sparkles size={36} className="text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-surface-800 mb-1">MemoDeer</h2>
+          <h2 className="font-display text-3xl text-surface-800 mb-1">MemoDeer</h2>
           <p className="text-surface-400 text-sm">知道 AI 学习助手</p>
-          <p className="text-surface-400 text-xs mt-2 max-w-xs mx-auto leading-relaxed">
-            面向中学生与大学生的智能学习工具，让每次复习都像有辅导老师陪伴
-          </p>
         </div>
 
         {/* Feature Cards */}

@@ -75,7 +75,7 @@ export default function ProfilePage() {
               </span>
             </div>
             <div className="min-w-0">
-              <p className="text-base font-semibold text-surface-800 truncate">
+              <p className="font-display text-lg text-surface-800 truncate">
                 {user?.display_name || user?.username}
               </p>
               <p className="text-xs text-surface-400">@{user?.username}</p>

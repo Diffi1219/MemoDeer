@@ -53,7 +53,7 @@ export default function PageHeader({ title, subtitle, onBack, actions, leftActio
 
       {/* 标题 */}
       <div className="flex-1 min-w-0">
-        <h1 className="font-semibold text-base text-surface-800 truncate">
+        <h1 className="font-display text-lg text-surface-800 truncate">
           {title}
         </h1>
         {subtitle && (
