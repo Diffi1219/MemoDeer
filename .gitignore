@@ -8,3 +8,5 @@ models/
 .env
 *.sqlite3
 .DS_Store
+scripts/node_modules/
+MemoDeer_Intro.pptx
