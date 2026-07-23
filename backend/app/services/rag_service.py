@@ -407,6 +407,8 @@ HTML 规则：
 3. 可用 elements：table、details/summary（折叠）、列表等
 4. 直接输出 ```html 代码块，不要加额外说明"""
 
+    system_prompt += ALGO_VIS_PROMPT
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"上下文资料：\n{context_text}\n\n用户问题：{question}\n\n请基于以上上下文回答，基于上下文的部分标注引用来源 [1][2] 等，上下文不足时用通用知识补充并在回答末尾列出参考文档名称。"},
@@ -471,7 +473,7 @@ async def stream_answer_open(
         "表格、对比、步骤时，使用 ```html 代码块输出 HTML。"
         "可用样式：card（卡片）、tag（标签）、highlight（高亮）、step（步骤）、table（表格）。"
         "每次回答使用 1-3 个 HTML 组件增强可读性。"
-    )
+    ) + ALGO_VIS_PROMPT
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": question},
@@ -645,7 +647,8 @@ async def stream_answer_fallback(
         "表格、对比、步骤时，使用 ```html 代码块输出 HTML。"
         "可用样式：card（卡片）、tag（标签）、highlight（高亮）、step（步骤）、table（表格）。"
         "每次回答使用 1-3 个 HTML 组件增强可读性。"
-    )
+    ) + ALGO_VIS_PROMPT
+
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": question},
@@ -750,6 +753,30 @@ async def create_note_from_text(
         "status": "completed",
     }
 
+
+# ── 算法可视化提示词（三处问答 prompt 共用）──
+ALGO_VIS_PROMPT = """
+**算法可视化规则**：
+当用户询问任何算法（排序、搜索、图算法、动态规划、树遍历、字符串算法等）时，你必须除了文字解释和代码实现之外，还提供一个**完整的可交互 HTML 可视化演示**。
+
+HTML 演示要求：
+1. 使用 DOM 元素（div/span）或 Canvas 绘制算法过程的数据结构：
+   - 排序算法 → 彩色柱子（bar chart）
+   - 树结构 → 圆形节点 + SVG 连线
+   - 图算法 → 圆形节点 + 边
+   - 搜索算法 → 高亮定位的数组/列表元素
+   - 动态规划 → 网格/表格高亮 dp 状态
+2. 必须包含控制按钮：▶ 开始 / ⏸ 暂停 / 🔄 重置 / ⏭ 单步
+3. 用颜色明确区分状态：
+   - 蓝色(#3b82f6) = 默认/未处理
+   - 黄色(#eab308) = 当前正在比较/检查
+   - 红色(#ef4444) = 交换/移动中
+   - 绿色(#22c55e) = 已完成/已排好序
+4. 在演示区域旁显示当前执行步骤的文字说明
+5. 全部 CSS 和内联 JS 写在一个 HTML 文件中，不依赖外部库（不需要 D3.js 等）
+6. 使用 CSS 变量 `var(--algo-default)` `var(--algo-comparing)` `var(--algo-swapping)` `var(--algo-done)` 以适配明暗主题
+7. 响应式布局：在手机上也能够正常显示和操作
+8. 设计简洁现代，圆角、阴影、良好排版"""
 
 # 导出状态消息函数供 API 层使用
 sse_status = _sse_status

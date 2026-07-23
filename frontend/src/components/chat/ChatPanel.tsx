@@ -6,6 +6,7 @@ import apiClient, { getApiUrl } from '../../api/client'
 import GenUI from '../common/GenUI'
 import { preprocessObsidian, CALLOUT_STYLES } from '../../utils/obsidian'
 import remarkMath from 'remark-math'
+import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 
@@ -52,20 +53,45 @@ function processInlineCitations(
 // 自适应高度 iframe 用于 HTML 代码块
 function HtmlBlock({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [height, setHeight] = useState(200)
+  const [height, setHeight] = useState(450)
+  const blobUrlRef = useRef<string | null>(null)
+  const lastResizeTime = useRef(0)
 
+  // resize 消息处理 — 250ms 防抖，避免动画触发无限增长
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data && typeof e.data === 'object' && e.data.type === 'resize') {
-        setHeight(Math.max(100, e.data.height + 20))
+        const now = Date.now()
+        if (now - lastResizeTime.current < 250) return
+        lastResizeTime.current = now
+        const newH = Math.max(320, Math.min(e.data.height + 30, 900))
+        setHeight(newH)
       }
     }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
   }, [])
 
-  const wrappedHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6; padding: 16px; margin: 0; color: var(--s-800, #334155); background: var(--s-0, #fff); }
+  // 用 Blob URL 渲染，避免 srcdoc 嵌套 HTML 导致的脚本/结构冲突
+  useEffect(() => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current)
+    }
+
+    // 清理 LLM 可能生成的 <!DOCTYPE> <html> <head> <body> 外层标签，避免嵌套
+    let content = html.trim()
+    content = content.replace(/<!DOCTYPE\s+html[^>]*>/gi, '')
+    const bodyMatch = content.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+    if (bodyMatch) {
+      content = bodyMatch[1]
+    } else {
+      content = content.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+      content = content.replace(/<\/?html[^>]*>/gi, '')
+      content = content.replace(/<\/?body[^>]*>/gi, '')
+    }
+
+    const wrappedHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6; padding: 16px; margin: 0; color: var(--s-800, #334155); background: var(--s-0, #fff); overflow-anchor: none; }
     table { border-collapse: collapse; width: 100%; margin: 8px 0; }
     th, td { border: 1px solid var(--s-200, #e2e8f0); padding: 8px 12px; text-align: left; }
     th { background: var(--s-100, #f1f5f9); font-weight: 600; }
@@ -76,19 +102,39 @@ function HtmlBlock({ html }: { html: string }) {
     .highlight { background: var(--warning-light, #fef3c7); padding: 2px 6px; border-radius: 4px; }
     .step { display: flex; gap: 12px; margin: 8px 0; align-items: flex-start; }
     .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--success, #22c55e); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
-  </style></head><body>${html}<script>
-    var h = document.body.scrollHeight;
-    parent.postMessage({type:'resize',height:h},'*');
-    new ResizeObserver(function(){var nh=document.body.scrollHeight;parent.postMessage({type:'resize',height:nh},'*');}).observe(document.body);
-  </script></body></html>`
+    :root { --algo-default: #3b82f6; --algo-comparing: #eab308; --algo-swapping: #ef4444; --algo-done: #22c55e; --algo-bg: #f8fafc; --algo-text: #1e293b; --algo-border: #e2e8f0; --algo-compare-bg: rgba(234,179,8,0.15); --algo-swap-bg: rgba(239,68,68,0.12); --algo-done-bg: rgba(34,197,94,0.12); }
+    @media (prefers-color-scheme: dark) { :root { --algo-bg: #1e293b; --algo-text: #e2e8f0; --algo-border: #334155; --algo-compare-bg: rgba(234,179,8,0.2); --algo-swap-bg: rgba(239,68,68,0.15); --algo-done-bg: rgba(34,197,94,0.15); } }
+    button { cursor: pointer; font-family: system-ui, -apple-system, sans-serif; }
+    .algo-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--algo-border); background: var(--algo-bg); color: var(--algo-text); font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .algo-btn:hover { filter: brightness(0.95); }
+    .algo-btn:active { transform: scale(0.97); }
+    .algo-btn.primary { background: var(--algo-default); color: #fff; border-color: var(--algo-default); }
+  </style><script>
+    var lastH=0;
+    function postH(){var h=document.body.scrollHeight;if(Math.abs(h-lastH)>5){lastH=h;parent.postMessage({type:'resize',height:h},'*');}}
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(postH,20);new ResizeObserver(postH).observe(document.body);});
+  </script></head><body>${content}</body></html>`
+
+    const blob = new Blob([wrappedHtml], { type: 'text/html' })
+    blobUrlRef.current = URL.createObjectURL(blob)
+    if (iframeRef.current) {
+      iframeRef.current.src = blobUrlRef.current
+    }
+
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current)
+        blobUrlRef.current = null
+      }
+    }
+  }, [html])
 
   return (
     <iframe
       ref={iframeRef}
-      srcDoc={wrappedHtml}
       sandbox="allow-scripts"
       className="w-full border border-surface-200 rounded-xl my-2"
-      style={{ height, minHeight: 100 }}
+      style={{ height, minHeight: 320, maxHeight: 900, overflow: 'hidden' }}
     />
   )
 }
@@ -318,9 +364,19 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                   )}
                   <div className="text-sm prose prose-sm max-w-none">
                   <ReactMarkdown
-                    remarkPlugins={[remarkMath]}
+                    remarkPlugins={[remarkMath, remarkGfm]}
                     rehypePlugins={[rehypeKatex, rehypeRaw]}
                     components={{
+                      pre({ children, ...props }: any) {
+                        // 检查是否包含 html/genui 代码块 — 跳过 <pre> 包裹，避免 iframe 被 pre 格式化破坏
+                        const codeChild = children?.props || {}
+                        const className = codeChild.className || ''
+                        const match = /language-(\w+)/.exec(className)
+                        if (match && (match[1] === 'html' || match[1] === 'genui')) {
+                          return <>{children}</>
+                        }
+                        return <pre {...props}>{children}</pre>
+                      },
                       code({ className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || '')
                         if (match && match[1] === 'genui') {

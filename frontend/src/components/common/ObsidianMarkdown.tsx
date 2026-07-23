@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
+import remarkGfm from 'remark-gfm'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { useMemo } from 'react'
@@ -146,7 +147,7 @@ export default function ObsidianMarkdown({ content, className }: ObsidianMarkdow
         }}
 
         // 允许 HTML（用于 <mark> 标签）
-        remarkPlugins={[remarkMath]}
+        remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeKatex, rehypeRaw]}
       >
         {processed}
