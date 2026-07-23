@@ -1225,6 +1225,8 @@ async def generate_knowledge_cards(
         )
         old_point_ids = [p.id for p in old_points_result.scalars().all()]
 
+    new_point_ids = []
+
     for item in cards:
         kp_id = uuid.uuid4().hex
         new_point_ids.append(kp_id)

@@ -157,7 +157,7 @@ export default function ChatPage() {
             <p className="text-sm text-surface-500 mb-6">删除后对话记录将无法恢复。</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-600">删除</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-700 transition-colors">删除</button>
             </div>
           </div>
         </div>

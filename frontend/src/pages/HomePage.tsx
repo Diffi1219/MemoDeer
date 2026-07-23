@@ -6,6 +6,7 @@ import { useUIStore } from '../store/uiStore'
 import { useAuthStore } from '../store/authStore'
 import { Plus, BookOpen, FileText, Brain, Menu, Loader2, Trash2, Search } from 'lucide-react'
 import GlobalSearchModal from '../components/common/GlobalSearchModal'
+import Modal from '../components/common/Modal'
 import PageHeader from '../components/layout/PageHeader'
 
 interface Notebook {
@@ -25,6 +26,7 @@ export default function HomePage() {
   const queryClient = useQueryClient()
   const [showCreate, setShowCreate] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const { data: notebooks, isLoading } = useQuery<Notebook[]>({
     queryKey: ['notebooks'],
@@ -124,9 +126,7 @@ export default function HomePage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (confirm('确定删除此笔记本？所有文档和对话将被清除。')) {
-                        deleteMutation.mutate(nb.id)
-                      }
+                      setDeleteId(nb.id)
                     }}
                     className="p-2 text-surface-300 hover:text-danger hover:bg-danger-light/50 rounded-lg transition-colors"
                   >
@@ -231,6 +231,38 @@ export default function HomePage() {
 
       {/* 全局搜索弹窗 */}
       <GlobalSearchModal />
+
+      {/* 删除确认弹窗 */}
+      <Modal
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="确定删除？"
+        variant="center"
+      >
+        <p className="text-sm text-surface-500 mb-6">
+          此笔记本及其所有文档和对话将被清除，此操作无法撤销。
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setDeleteId(null)}
+            className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => {
+              if (deleteId) {
+                deleteMutation.mutate(deleteId)
+                setDeleteId(null)
+              }
+            }}
+            disabled={deleteMutation.isPending}
+            className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            {deleteMutation.isPending ? '删除中...' : '删除'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

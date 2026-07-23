@@ -81,7 +81,7 @@ export default function PendingVectorizeBar({ notebookId, items, onRefresh }: Pe
         <button
           onClick={handleVectorizeAll}
           disabled={vectorizing}
-          className="ml-auto flex items-center gap-1 px-3 py-1 bg-warning text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors btn-press"
+          className="ml-auto flex items-center gap-1 px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors btn-press"
         >
           {vectorizing ? (
             <Loader2 size={12} className="animate-spin" />

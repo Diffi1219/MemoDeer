@@ -540,7 +540,7 @@ export default function NotebookPage() {
           )}
 
           {/* File Content / Tab Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden animate-fade-in" key={activeTab}>
             {/* Files Tab */}
             {activeTab === 'files' && (
               <>
@@ -775,7 +775,7 @@ export default function NotebookPage() {
             </p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-600">删除</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-700">删除</button>
             </div>
           </div>
         </div>

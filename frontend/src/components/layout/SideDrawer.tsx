@@ -5,27 +5,7 @@ import {
   BookOpen, Search, Settings, LogOut, X, MessageSquare,
   ChevronRight, Info, User, Sparkles,
 } from 'lucide-react'
-
-/** 鹿角几何 SVG — 极简分叉线条，品牌 Signature 元素 */
-function AntlerMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12 16V6" />
-      <path d="M12 6L4 1" />
-      <path d="M12 6L20 1" />
-      <path d="M4 1L2 4" />
-      <path d="M20 1L22 4" />
-    </svg>
-  )
-}
+import AntlerLogo from '../common/AntlerLogo'
 
 export default function SideDrawer() {
   const isOpen = useUIStore((s) => s.isDrawerOpen)
@@ -113,8 +93,8 @@ export default function SideDrawer() {
       >
         {/* 品牌鹿角标识 */}
         <div className="flex items-center justify-center gap-1.5 mb-3 opacity-40">
-          <AntlerMark className="w-4 h-3 text-surface-400" />
-          <span className="text-[10px] text-surface-400 font-medium">MemoDeer</span>
+          <AntlerLogo className="w-4 h-3 text-surface-400" />
+          <span className="text-[10px] text-surface-400 font-medium">善用 AI，智取知识</span>
         </div>
 
         {/* 登出按钮 */}

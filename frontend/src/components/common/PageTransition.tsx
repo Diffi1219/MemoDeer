@@ -26,7 +26,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   }, [location.pathname, children])
 
   return (
-    <div className={transitionStage === 'enter' ? 'page-enter' : 'page-exit'}>
+    <div className={`h-full ${transitionStage === 'enter' ? 'page-enter' : 'page-exit'}`}>
       {displayChildren}
     </div>
   )

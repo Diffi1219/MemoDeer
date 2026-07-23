@@ -44,6 +44,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
   const [mnemonics, setMnemonics] = useState<MnemonicItem[]>([])
   const [loading, setLoading] = useState(false)
   const [generated, setGenerated] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)  // 首次加载检查
   const [error, setError] = useState('')
 
   // 编辑状态
@@ -91,6 +92,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
 
   const loadCards = async () => {
     if (!selectedNbId) return
+    setInitialLoading(true)
     try {
       const r = await apiClient.get(`/notebooks/${selectedNbId}/premium/cards`)
       const loaded = r.data.cards || []
@@ -99,19 +101,19 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
         setGenerated(true)
         setError('')
       } else {
-        // 无已有卡片，保持空状态
         setCards([])
         setGenerated(false)
         setError('')
       }
     } catch (err: any) {
-      // 403 → 会员可能已过期，同步状态到 authStore
       if (err.response?.status === 403) {
         useAuthStore.getState().setPremium(false, 'free', null)
       }
       setError(err.response?.status === 403
         ? '会员已过期，请续费后查看知识卡片'
         : '加载知识卡片失败，请检查网络连接')
+    } finally {
+      setInitialLoading(false)
     }
   }
 
@@ -393,6 +395,14 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
   }
 
   // ── 空状态 ──
+  if (initialLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 size={24} className="animate-spin text-surface-300" />
+      </div>
+    )
+  }
+
   if (!generated && !loading) {
     return (
       <>
@@ -409,7 +419,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
               <div className="bg-danger-light border border-danger/30 rounded-xl px-4 py-3 mb-3">
                 <p className="text-sm text-danger">{error}</p>
                 {error.includes('会员') && (
-                  <button onClick={() => navigate('/membership')} className="mt-2 text-xs text-white bg-danger hover:bg-red-600 px-3 py-1.5 rounded-lg">
+                  <button onClick={() => navigate('/membership')} className="mt-2 text-xs text-white bg-danger hover:bg-red-700 px-3 py-1.5 rounded-lg">
                     去续费
                   </button>
                 )}

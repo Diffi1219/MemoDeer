@@ -3,27 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
 import { Loader2, Upload, MessageCircle, Search } from 'lucide-react'
-
-/** 鹿角几何 SVG — 注册页品牌标识 */
-function AntlerLogo() {
-  return (
-    <svg
-      viewBox="0 0 40 28"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-10 h-7"
-    >
-      <path d="M20 26V10" />
-      <path d="M20 10L6 2" />
-      <path d="M20 10L34 2" />
-      <path d="M6 2L2 8" />
-      <path d="M34 2L38 8" />
-    </svg>
-  )
-}
+import AntlerLogo from '../components/common/AntlerLogo'
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('')
@@ -72,7 +52,7 @@ export default function RegisterPage() {
           <h1 className="font-display text-3xl italic" style={{ color: 'var(--s-800)' }}>
             MemoDeer
           </h1>
-          <p className="text-surface-400 text-sm mt-1.5">创建你的学习账号</p>
+          <p className="text-surface-400 text-sm mt-1.5">善用 AI，智取知识</p>
         </div>
 
         {/* 表单卡片 */}

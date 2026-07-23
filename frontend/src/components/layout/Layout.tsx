@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { useUIStore } from '../../store/uiStore'
 import SideDrawer from './SideDrawer'
 import Toast from '../common/Toast'
+import PageTransition from '../common/PageTransition'
 
 export default function Layout() {
   const isDrawerOpen = useUIStore((s) => s.isDrawerOpen)
@@ -11,7 +12,9 @@ export default function Layout() {
     <div className="h-full flex flex-col bg-surface-50">
       {/* 主内容区 */}
       <div className="flex-1 overflow-hidden relative">
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </div>
 
       {/* 侧拉栏遮罩 */}
