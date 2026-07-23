@@ -1,4 +1,7 @@
 import ReactMarkdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import rehypeRaw from 'rehype-raw'
 import { useMemo } from 'react'
 
 interface ObsidianMarkdownProps {
@@ -52,11 +55,22 @@ export default function ObsidianMarkdown({ content, className }: ObsidianMarkdow
         components={{
           // ── Callout 渲染 ──
           blockquote({ children, ...props }) {
-            // 检查是否为 Obsidian callout (> [!type])
+            // 检查是否为 Obsidian callout (> [!type]) — 从 node 或 children 中提取文本
             const node = (props as any).node
-            const firstChild = node?.children?.[0]?.children?.[0]
-            const text = firstChild?.value || ''
-            const calloutMatch = text.match(/^\[!(\w+)\]\s*(.*)/)
+            // 优先用 raw node 文本；rehype-raw 会改变 AST 结构，需要回退到渲染 children
+            const rawText = (() => {
+              try {
+                // 尝试递归提取 node 中所有 text 节点
+                const walk = (n: any): string => {
+                  if (!n) return ''
+                  if (n.type === 'text' || n.type === 'raw') return n.value || ''
+                  if (n.children) return n.children.map(walk).join('')
+                  return ''
+                }
+                return walk(node)
+              } catch { return '' }
+            })()
+            const calloutMatch = rawText.trimStart().match(/^\[!(\w+)\]\s*(.*)/)
 
             if (calloutMatch) {
               const type = calloutMatch[1].toLowerCase()
@@ -64,8 +78,28 @@ export default function ObsidianMarkdown({ content, className }: ObsidianMarkdow
               const style = CALLOUT_STYLES[type] || CALLOUT_STYLES.note
 
               // 提取 callout 内容（跳过第一行的 [!type] title）
+              // rehype-raw 后 children 结构为单个 <p>，内容在 text 中，需要 map 去除首行
               const childrenArr = Array.isArray(children) ? children : [children]
-              const contentChildren = childrenArr.slice(1)
+              const contentChildren = childrenArr.map((child: any) => {
+                // 如果是段落且子节点是文本，尝试去除首行的 [!type] title
+                if (child?.type === 'p' && Array.isArray(child.props?.children)) {
+                  const textChildren = child.props.children as any[]
+                  // 找到第一个包含 [!type] 的文本节点并移除该行
+                  const filtered = textChildren.map((tc: any) => {
+                    if (typeof tc === 'string' && tc.startsWith('[!')) {
+                      const newlineIdx = tc.indexOf('\n')
+                      return newlineIdx >= 0 ? tc.slice(newlineIdx + 1) : ''
+                    }
+                    return tc
+                  }).filter(Boolean)
+                  return { ...child, props: { ...child.props, children: filtered } }
+                }
+                return child
+              }).filter((c: any) => {
+                // 过滤掉空文本节点
+                if (typeof c === 'string') return c.trim().length > 0
+                return true
+              })
 
               return (
                 <div className={`${style.bg} border-l-4 ${style.border} rounded-r-lg p-4 my-3`}>
@@ -148,7 +182,8 @@ export default function ObsidianMarkdown({ content, className }: ObsidianMarkdow
         }}
 
         // 允许 HTML（用于 <mark> 标签）
-        remarkPlugins={[]}
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[rehypeKatex, rehypeRaw]}
       >
         {processed}
       </ReactMarkdown>

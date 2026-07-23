@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FileText, FolderPlus, Plus, Trash2, Pencil, MoveRight } from 'lucide-react'
 
 interface ContextMenuProps {
@@ -19,6 +20,7 @@ export default function FileContextMenu({
   onCreateFile, onCreateFolder, onMove,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -37,9 +39,18 @@ export default function FileContextMenu({
     }
   }, [onClose])
 
-  // 防止菜单超出屏幕
-  const adjustedX = Math.min(x, window.innerWidth - 200)
-  const adjustedY = Math.min(y, window.innerHeight - 280)
+  // 挂载后测量菜单实际尺寸，计算调整后的坐标避免超出屏幕
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect()
+      const menuW = rect.width || 200
+      const menuH = rect.height || 200
+      setOffset({
+        x: Math.max(0, Math.min(x, window.innerWidth - menuW - 4)),
+        y: Math.max(0, Math.min(y, window.innerHeight - menuH - 4)),
+      })
+    }
+  }, [x, y])
 
   const items = []
 
@@ -56,13 +67,13 @@ export default function FileContextMenu({
     { icon: Trash2, label: '删除', onClick: onDelete, danger: true },
   )
 
-  return (
+  const menu = (
     <div
       ref={menuRef}
       className="fixed z-[100] min-w-[180px] py-1.5 rounded-xl shadow-xl border border-surface-200/60 animate-modal-sheet-center"
       style={{
-        left: adjustedX,
-        top: adjustedY,
+        left: offset.x || x,
+        top: offset.y || y,
         background: 'rgba(255, 255, 255, 0.85)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
@@ -93,4 +104,6 @@ export default function FileContextMenu({
       ))}
     </div>
   )
+
+  return createPortal(menu, document.body)
 }

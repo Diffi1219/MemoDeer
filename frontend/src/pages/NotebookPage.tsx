@@ -17,7 +17,7 @@ import ChatPanel from '../components/chat/ChatPanel'
 import PendingVectorizeBar from '../components/common/PendingVectorizeBar'
 import KnowledgePanel from '../components/common/KnowledgePanel'
 import PremiumGate from '../components/common/PremiumGate'
-import ReactMarkdown from 'react-markdown'
+import ObsidianMarkdown from '../components/common/ObsidianMarkdown'
 
 interface PendingItem {
   document_id: string
@@ -50,6 +50,8 @@ export default function NotebookPage() {
 
   // UI state
   const toggleDrawer = useUIStore((s) => s.toggleDrawer)
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
 
   // Notebook data
   const [notebook, setNotebook] = useState<any>(null)
@@ -323,6 +325,28 @@ export default function NotebookPage() {
     }
   }
 
+  const [deepDiscussing, setDeepDiscussing] = useState(false)
+
+  const handleDeepDiscuss = async () => {
+    if (!id || !askModal.answer || deepDiscussing) return
+    setDeepDiscussing(true)
+    try {
+      const userMsg = `关于这段文字：\n> ${askModal.text}\n\n${askModal.question}`
+      const res = await apiClient.post(`/notebooks/${id}/chat/sessions/create-with-messages`, {
+        notebook_id: id,
+        title: askModal.text.slice(0, 30),
+        user_message: userMsg,
+        assistant_message: askModal.answer,
+      })
+      setAskModal(prev => ({ ...prev, show: false }))
+      navigate(`/notebook/${id}/chat/${res.data.session_id}`)
+    } catch (err: any) {
+      alert('创建对话失败: ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setDeepDiscussing(false)
+    }
+  }
+
   // ====== Helpers ======
 
   const formatSize = (bytes: number) => {
@@ -421,27 +445,53 @@ export default function NotebookPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0">
-        {/* File Tree Sidebar (only in files tab) */}
+        {/* File Tree Sidebar (only in files tab, collapsible) */}
         {isFileTab && (
-          <div className="w-[240px] sm:w-[260px] flex-shrink-0 border-r border-surface-200 bg-white/60 backdrop-blur-sm overflow-y-auto">
-            <FileTree
-              tree={tree}
-              selectedId={selectedNode?.id || null}
-              expandedIds={expandedIds}
-              onSelect={handleSelectNode}
-              onToggle={handleToggle}
-              onRename={handleRename}
-              onDelete={handleDelete}
-              onMove={handleMove}
-              onCreateFile={(parentId) => { setCreateModal({ type: 'file', parentId }); setCreateName('') }}
-              onCreateFolder={(parentId) => { setCreateModal({ type: 'folder', parentId }); setCreateName('') }}
-              onUpload={() => setUploadOpen(true)}
-              onRefresh={loadTree}
-              searchQuery={fileSearchQuery}
-              onSearchChange={handleFileSearchChange}
-              uploading={uploading}
-            />
-          </div>
+          <>
+            <div
+              className={`flex-shrink-0 border-r border-surface-200 bg-white/60 overflow-hidden transition-[width] duration-300 ease-out ${
+                sidebarCollapsed ? 'w-0 border-r-0' : 'w-[240px] sm:w-[260px]'
+              }`}
+            >
+              <div className="w-[240px] sm:w-[260px] h-full overflow-y-auto">
+                <FileTree
+                  tree={tree}
+                  selectedId={selectedNode?.id || null}
+                  expandedIds={expandedIds}
+                  onSelect={handleSelectNode}
+                  onToggle={handleToggle}
+                  onRename={handleRename}
+                  onDelete={handleDelete}
+                  onMove={handleMove}
+                  onCreateFile={(parentId) => { setCreateModal({ type: 'file', parentId }); setCreateName('') }}
+                  onCreateFolder={(parentId) => { setCreateModal({ type: 'folder', parentId }); setCreateName('') }}
+                  onUpload={() => setUploadOpen(true)}
+                  onRefresh={loadTree}
+                  searchQuery={fileSearchQuery}
+                  onSearchChange={handleFileSearchChange}
+                  uploading={uploading}
+                />
+              </div>
+            </div>
+            {/* 折叠按钮 */}
+            <div
+              className={`flex-shrink-0 flex flex-col justify-center -ml-px z-10 ${
+                sidebarCollapsed ? '' : ''
+              }`}
+            >
+              <button
+                onClick={toggleSidebar}
+                className="w-5 h-10 bg-white border border-surface-200 rounded-r-lg flex items-center justify-center cursor-pointer hover:bg-surface-50 transition-colors shadow-sm"
+                title={sidebarCollapsed ? '展开文件树' : '收起文件树'}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight size={12} className="text-surface-400" />
+                ) : (
+                  <ChevronLeft size={12} className="text-surface-400" />
+                )}
+              </button>
+            </div>
+          </>
         )}
 
         {/* Content Area */}
@@ -516,6 +566,7 @@ export default function NotebookPage() {
                       needsRevectorize={selectedNode.needs_revectorize === 1}
                       onSave={handleSaveDocument}
                       onRevectorize={handleRevectorize}
+                      notebookId={id}
                     />
                   ) : (
                     <div className="h-full overflow-y-auto">
@@ -658,8 +709,21 @@ export default function NotebookPage() {
               <div className="px-4 py-3 border-t border-surface-200 overflow-y-auto">
                 <p className="text-xs text-surface-400 mb-1">AI 回答：</p>
                 <div className="text-sm text-surface-700 prose prose-sm max-w-none">
-                  <ReactMarkdown>{askModal.answer}</ReactMarkdown>
+                  <ObsidianMarkdown content={askModal.answer} />
                 </div>
+                {/* 深度探讨按钮 */}
+                <button
+                  onClick={handleDeepDiscuss}
+                  disabled={deepDiscussing}
+                  className="w-full mt-3 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl text-sm font-medium hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                >
+                  {deepDiscussing ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <MessageCircle size={14} />
+                  )}
+                  深度探讨
+                </button>
               </div>
             )}
           </div>

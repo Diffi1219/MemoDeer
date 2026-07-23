@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MessageCircle, Loader2, X as XIcon, Send } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { MessageCircle, Loader2, X as XIcon, Send, ArrowRight } from 'lucide-react'
 import apiClient from '../../api/client'
-import ReactMarkdown from 'react-markdown'
+import ObsidianMarkdown from './ObsidianMarkdown'
 
 interface Props {
   children: React.ReactNode
   className?: string
+  notebookId?: string
 }
 
 interface AskState {
@@ -18,12 +20,14 @@ interface AskState {
   y: number
 }
 
-export default function SelectionAsk({ children, className }: Props) {
+export default function SelectionAsk({ children, className, notebookId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   const [state, setState] = useState<AskState>({
     visible: false, selectedText: '', question: '', answer: '',
     loading: false, x: 0, y: 0,
   })
+  const [deepDiscussing, setDeepDiscussing] = useState(false)
 
   // 检测文本选中
   const handleMouseUp = useCallback((e: MouseEvent) => {
@@ -97,6 +101,26 @@ export default function SelectionAsk({ children, className }: Props) {
         answer: err.response?.data?.detail || '请求失败，请重试',
         loading: false,
       }))
+    }
+  }
+
+  const handleDeepDiscuss = async () => {
+    if (!notebookId || !state.answer || deepDiscussing) return
+    setDeepDiscussing(true)
+    try {
+      const userMsg = `关于这段文字：\n> ${state.selectedText}\n\n${state.question}`
+      const res = await apiClient.post(`/notebooks/${notebookId}/chat/sessions/create-with-messages`, {
+        notebook_id: notebookId,
+        title: state.selectedText.slice(0, 30),
+        user_message: userMsg,
+        assistant_message: state.answer,
+      })
+      handleClose()
+      navigate(`/notebook/${notebookId}/chat/${res.data.session_id}`)
+    } catch (err: any) {
+      alert('创建对话失败: ' + (err.response?.data?.detail || err.message))
+    } finally {
+      setDeepDiscussing(false)
     }
   }
 
@@ -183,8 +207,23 @@ export default function SelectionAsk({ children, className }: Props) {
               <div className="px-4 py-3 border-t border-surface-200 overflow-y-auto">
                 <p className="text-xs text-surface-400 mb-1">AI 回答：</p>
                 <div className="text-sm text-surface-700 prose prose-sm max-w-none">
-                  <ReactMarkdown>{state.answer}</ReactMarkdown>
+                  <ObsidianMarkdown content={state.answer} />
                 </div>
+                {/* 深度探讨按钮 */}
+                {notebookId && (
+                  <button
+                    onClick={handleDeepDiscuss}
+                    disabled={deepDiscussing}
+                    className="w-full mt-3 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl text-sm font-medium hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                  >
+                    {deepDiscussing ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <ArrowRight size={14} />
+                    )}
+                    深度探讨
+                  </button>
+                )}
               </div>
             )}
           </div>
