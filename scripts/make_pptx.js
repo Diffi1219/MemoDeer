@@ -681,6 +681,11 @@ async function main() {
   const outPath = 'MemoDeer_Intro.pptx';
   console.log(`Writing ${outPath}...`);
   await pres.writeFile({ fileName: outPath });
+
+  // Fix phantom slideMaster entries that cause PowerPoint repair warnings
+  console.log('Fixing OOXML phantom entries...');
+  const { execSync } = require('child_process');
+  execSync(`python scripts/fix_pptx.py "${outPath}"`, { stdio: 'inherit' });
   console.log('Done!');
 }
 
