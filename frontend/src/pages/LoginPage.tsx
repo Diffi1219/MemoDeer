@@ -49,13 +49,13 @@ export default function LoginPage() {
         {/* 表单卡片 — 浮在纸质纹理之上 */}
         <form onSubmit={handleSubmit} className="card p-6 space-y-4 shadow-md" style={{ backgroundColor: 'var(--s-0)' }}>
           <div>
-            <label className="block text-sm font-medium text-surface-600 mb-1.5">用户名</label>
+            <label className="block text-sm font-medium text-surface-600 mb-1.5">用户ID</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="input-primary"
-              placeholder="请输入用户名"
+              placeholder="请输入用户ID"
               required
               autoFocus
             />

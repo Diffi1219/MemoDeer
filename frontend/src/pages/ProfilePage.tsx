@@ -18,13 +18,16 @@ export default function ProfilePage() {
   // 加载统计
   useEffect(() => {
     apiClient.get('/auth/user/stats').then(r => setStats(r.data)).catch(() => {})
-    // 打卡逻辑
-    const today = new Date().toISOString().slice(0, 10)
+    // 打卡逻辑 — 使用本地时间避免时区问题
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const lastCheckin = localStorage.getItem('last_checkin_date')
     const days = parseInt(localStorage.getItem('checkin_days') || '0')
     if (lastCheckin !== today) {
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-      const newDays = lastCheckin === yesterday ? days + 1 : 1
+      const yesterday = new Date(now)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+      const newDays = lastCheckin === yesterdayStr ? days + 1 : 1
       localStorage.setItem('checkin_days', String(newDays))
       localStorage.setItem('last_checkin_date', today)
       setCheckinDays(newDays)
@@ -122,7 +125,7 @@ export default function ProfilePage() {
         <div className="bg-surface-0 rounded-2xl border border-surface-200 overflow-hidden">
           <h3 className="text-sm font-semibold text-surface-600 px-4 py-3 border-b border-surface-100">个人信息</h3>
           {[
-            { label: '用户名', value: user?.username || '', field: 'username', editable: false },
+            { label: '用户ID', value: user?.username || '', field: 'username', editable: false },
             { label: '显示名', value: user?.display_name || '', field: 'display_name', editable: true },
           ].map(row => (
             <div key={row.field} className="flex items-center justify-between px-4 py-3 border-b border-surface-50 last:border-0">
