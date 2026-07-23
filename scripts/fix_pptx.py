@@ -31,16 +31,18 @@ with zipfile.ZipFile(src, 'r') as z:
     print(f'Found {len(phantom_ct)} phantom Override(s) in Content_Types, '
           f'{len(phantom_pres)} phantom sldMasterId(s) in presentation.xml')
 
-    # Read all files, preserving original compression types
+    # Collect directories we need to preserve (OOXML expects them)
+    dirs = set()
+    for info in z.infolist():
+        if info.is_dir():
+            dirs.add(info.filename)
+
+    # Read all file contents
     files = {}
-    compressions = {}
     for info in z.infolist():
         if not info.is_dir():
             data = z.read(info.filename)
             files[info.filename] = data
-            # pptxgenjs outputs everything as STORED (0); preserve that for all
-            # unmodified files. Only [Content_Types].xml stays STORED always.
-            compressions[info.filename] = zipfile.ZIP_STORED
 
     # Apply fixes
     if phantom_ct:
@@ -60,8 +62,17 @@ with zipfile.ZipFile(src, 'r') as z:
 
 # Write fixed ZIP — all STORED to match pptxgenjs original style
 # [Content_Types].xml MUST be STORED per OOXML spec
+# Directory entries are also required by OOXML (PowerPoint repairs files without them)
 tmp = src + '.tmp'
 with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_STORED) as zout:
+    # Write directories first, matching original ordering
+    for d in sorted(dirs):
+        zout.writestr(d, b'', compress_type=zipfile.ZIP_STORED)
+    # Write [Content_Types].xml first (OOXML spec requires it be the first file)
+    ct_data = files.pop('[Content_Types].xml', None)
+    if ct_data:
+        zout.writestr('[Content_Types].xml', ct_data, compress_type=zipfile.ZIP_STORED)
+    # Write remaining files
     for name, data in files.items():
         zout.writestr(name, data, compress_type=zipfile.ZIP_STORED)
 
