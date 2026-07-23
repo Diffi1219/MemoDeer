@@ -405,7 +405,8 @@ HTML 规则：
 1. 每个回答使用 1-3 个 HTML 组件增强可读性
 2. 可用 class：card（卡片）、tag（标签）、highlight（高亮）、step/step-num（步骤）
 3. 可用 elements：table、details/summary（折叠）、列表等
-4. 直接输出 ```html 代码块，不要加额外说明"""
+4. 直接输出 ```html 代码块，不要加额外说明
+	5. **算法执行过程/排序动态演示不要用 HTML**，请参照下面的"算法可视化规则"用 ```algo-viz JSON 输出"""
 
     system_prompt += ALGO_VIS_PROMPT
 
