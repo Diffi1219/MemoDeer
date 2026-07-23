@@ -91,7 +91,7 @@ All providers implement `BaseLLMProvider` abstract class via `OpenAICompatiblePr
 | LLM | `llm_service.py` | Three-tier OpenAI-compatible provider, model routing |
 | Embedding | `embedding_service.py` | BGE-small-zh sentence-transformers, 3-tier model loading fallback |
 | Vector store | `vector_store.py` | ChromaDB collection management, add/search/delete |
-| RAG | `rag_service.py` | Document processing pipeline, Q&A with citations, `generate_knowledge_cards()`, `generate_mnemonics()` |
+| RAG | `rag_service.py` | Document processing pipeline, Q&A with citations, `generate_knowledge_cards()`, `generate_mnemonics()`, `ALGO_VIS_PROMPT` system prompt for algorithm visualization, `RAG_DISTANCE_THRESHOLD=0.85` |
 | Parser | `parser_service.py` | PDF (PyMuPDF), DOCX (python-docx), TXT/MD extraction |
 | Chunking | `chunking_service.py` | Text splitting with overlap, token estimation |
 
@@ -99,13 +99,13 @@ All providers implement `BaseLLMProvider` abstract class via `OpenAICompatiblePr
 
 | Layer | Location | Role |
 |-------|----------|------|
-| Pages | `pages/` | 10 pages: Login, Register, Home (notebook list), Notebook (VSCode-style file tree + 4-tab content), Chat (SSE), DocumentView (Markdown + highlight), Settings, Membership, Quiz, About, Profile |
+| Pages | `pages/` | 11 pages: Login, Register, Home (notebook list), Notebook (VSCode-style file tree + 4-tab content), Chat (SSE), DocumentView (Markdown + highlight), Settings, Membership, Quiz, About, Profile |
 | Chat | `components/chat/` | `ChatPanel` — reusable SSE streaming chat with inline citation rendering, GenUI code block detection, HTML sandbox preview, "add to note" button |
 | File tree | `components/file-tree/` | `FileTree` (searchable container), `FileTreeNode` (recursive expand/collapse, inline rename, drag), `FileContextMenu` (right-click actions: rename/move/delete) |
 | Editor | `components/editor/` | `MarkdownEditor` — dual-mode preview/edit with synced line numbers, Ctrl+S save, word/char counter |
-| Common | `components/common/` | `GenUI`, `GlobalSearchModal` (Ctrl+K, cross-notebook), `SelectionAsk` (text-select → ask AI), `KnowledgePanel` (cards + mnemonics CRUD), `KnowledgeCards`, `MnemonicsList`, `PendingVectorizeBar`, `PremiumGate`, `ObsidianMarkdown` (wikilinks, callouts, highlights) |
-| Layout | `components/layout/` | `Layout` (wraps protected routes with drawer + `<Outlet/>`), `SideDrawer` |
-| State | `store/` | `authStore.ts` (JWT + user + premium state, localStorage-backed, logout clears React Query cache), `uiStore.ts` (drawer, upload modal, global search, sidebar width, active file, pending vectorize count, 5 color themes) |
+| Common | `components/common/` | `AlgoVisualizer` (interactive algorithm visualization with play/pause/step controls for sorting, searching, graph algorithms), `GenUI`, `GlobalSearchModal` (Ctrl+K, cross-notebook), `SelectionAsk` (text-select → ask AI), `KnowledgePanel` (cards + mnemonics CRUD), `KnowledgeCards`, `MnemonicsList`, `ObsidianMarkdown` (wikilinks, callouts, highlights), `PendingVectorizeBar`, `PremiumGate`, `Modal`, `PageTransition` (page enter/exit animations), `Skeleton` (loading placeholder), `Toast` (notification system), `AntlerLogo` |
+| Layout | `components/layout/` | `Layout` (wraps protected routes with drawer + `<Outlet/>`), `SideDrawer`, `PageHeader` (unified back-arrow + title + shadow-on-scroll) |
+| State | `store/` | `authStore.ts` (JWT + user + premium state, localStorage-backed, logout clears React Query cache), `uiStore.ts` (drawer, upload modal, global search, sidebar width, active file, pending vectorize count, 5 color themes, theme mode light/dark/system, toast notification queue with auto-dismiss) |
 | API | `api/` | `client.ts` (Axios: dynamic base URL, 60s timeout, auto Bearer token, 401→redirect), `queryClient.ts` (React Query: retry 1, staleTime 30s, no refetchOnWindowFocus) |
 
 **Provider stack** at mount: `StrictMode → QueryClientProvider → BrowserRouter → App`
@@ -114,7 +114,7 @@ All providers implement `BaseLLMProvider` abstract class via `OpenAICompatiblePr
 
 **Chat SSE**: `ChatPage` / `ChatPanel` use native `fetch()` with `ReadableStream` to consume SSE events. Events: `token`, `status`, `citations`, `source` (`"rag"` | `"open"`), `done`, `error`.
 
-**Color theme system**: `uiStore` supports 5 themes (`blue`/`purple`/`orange`/`green`/`pink`), persisted to localStorage, applied via `document.documentElement.dataset.theme`. Tailwind uses CSS variables for theming.
+**Color theme system**: `uiStore` supports 5 color themes (`blue`/`purple`/`orange`/`green`/`pink`) plus 3 theme modes (`light`/`dark`/`system`), all persisted to localStorage. Color themes applied via `document.documentElement.dataset.theme`; theme mode via `dataset.themeMode`. Tailwind uses CSS variables for theming, with an extensive custom design system: custom primary/surface/accent/danger color scales (CSS custom properties), font families (IBM Plex Sans + Noto Sans SC for body, Crimson Text for display), animation tokens (fade-in, fade-in-up, page-enter, pop-in, toast-in, modal-sheet with stagger delays), and 5 custom easing curves (out, in-out, spring, bounce, smooth). Dark mode uses Tailwind's `class` strategy — CSS variables swap values under `[data-theme-mode="dark"]`.
 
 ### Key data flows
 
@@ -135,6 +135,8 @@ All providers implement `BaseLLMProvider` abstract class via `OpenAICompatiblePr
 **GenUI knowledge visualization**: LLM responses can include ` ```genui ` fenced code blocks with JSON data. ChatPage/SelectionAsk custom react-markdown `code` handler detects `language-genui`, parses JSON, renders `<GenUI>`. Supported types: `concept-card`, `key-points`, `comparison`, `steps`, `example-box`.
 
 **Text selection → inline ask**: `SelectionAsk` component wraps content areas. User selects text → popup appears at selection position → type question → Flash LLM answers in-place. Used in DocumentViewPage and NotebookPage document previews.
+
+**Algorithm interactive visualization**: When users ask about algorithms (sorting, searching, graph, DP, tree, string matching), the LLM is instructed via `ALGO_VIS_PROMPT` (in `rag_service.py`) to output `` ```algo-viz `` JSON code blocks with step-by-step execution data. The frontend `AlgoVisualizer` component renders these as interactive bar-chart animations with play/pause/reset/step controls. Supported algorithms include bubble/selection/insertion/quick/merge/heap/shell sort, binary/linear search, BFS/DFS, Dijkstra, knapsack DP, and more. The JSON format: `{algorithm, array, steps[]}` where each step has `{type, i?, j?, desc, value?}`.
 
 **Search**: query → embed → ChromaDB search across all user notebooks → formatted results grouped by notebook with doc names + scores. Score = `1 - distance` (BGE cosine distance ∈ [0,2], so scores can be negative — don't interpret as percentage without clamping).
 
@@ -178,3 +180,6 @@ All providers implement `BaseLLMProvider` abstract class via `OpenAICompatiblePr
 - **Card front/back encoding**: Knowledge cards store front/back in `KnowledgePoint.content` as `**{front}**\n\n{back}`. The `/premium/cards` GET endpoint parses this format; the PUT endpoint reconstructs it. Don't store cards as plain text or they won't render in KnowledgePanel.
 - **Logout cache clearing**: `authStore.logout()` calls `queryClient.clear()` to prevent stale data flash when switching users. Any new cached queries should consider this pattern.
 - **Premium gating**: Backend uses `require_premium` dependency (raises 403). Frontend uses `PremiumGate` component wrapper + `useAuthStore.isPremium` checks. Both must align on which features are premium.
+- **AlgoVisualizer only renders in ChatPanel**: The `AlgoVisualizer` component is only wired into `ChatPanel`'s custom code-block renderer. Other Markdown contexts (DocumentViewPage, SelectionAsk) will show raw JSON for `algo-viz` code blocks.
+- **Backend scripts**: `scripts/download_embedding.py` downloads/switches embedding models; `scripts/migrate_db.py` is a legacy standalone migration (now superseded by `init_db()`'s inline `_migrate`); `scripts/test_auth.py` validates `UserOut.model_validate` with int `is_premium`. These are admin tools, not part of the app runtime.
+- **No `.env.example`**: the project lacks a committed `.env.example` template. New developers should copy the existing `backend/.env` and replace the `DEEPSEEK_API_KEY` value.
