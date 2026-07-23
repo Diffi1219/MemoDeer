@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { queryClient } from '../api/queryClient'
 
 interface User {
   id: string
@@ -57,6 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     set({ token: null, user: null, isPremium: false, premiumType: 'free' })
+    queryClient.clear()
   },
   isLoggedIn: () => !!get().token,
   setPremium: (isPremium, premiumType, premiumExpireAt) => {
