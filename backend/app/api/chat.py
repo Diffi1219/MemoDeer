@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.core.database import get_db
 from app.core.models import User, Notebook, ChatSession, ChatMessage
-from app.core.schemas import ChatRequest, ChatSessionCreate, ChatSessionOut, ChatMessageOut
+from app.core.schemas import ChatRequest, ChatSessionCreate, ChatSessionOut, ChatMessageOut, DeepDiscussRequest, DeepDiscussResponse
 from app.api.auth import get_current_user, check_premium_status
 from app.services.rag_service import (
     retrieve_context, stream_answer, stream_answer_open, stream_answer_fallback,
@@ -279,3 +279,52 @@ async def delete_session(
 
     await db.delete(session)
     await db.flush()
+
+
+@router.post("/api/notebooks/{notebook_id}/chat/sessions/create-with-messages")
+async def create_session_with_messages(
+    notebook_id: str,
+    data: DeepDiscussRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """从选中文字问答创建对话会话，预填充用户消息和 AI 回复"""
+    # 验证笔记本所有权
+    result = await db.execute(
+        select(Notebook).where(Notebook.id == notebook_id, Notebook.user_id == user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="笔记本不存在")
+
+    # 创建会话
+    session = ChatSession(
+        id=uuid.uuid4().hex,
+        notebook_id=notebook_id,
+        title=data.title[:30] + ("..." if len(data.title) > 30 else ""),
+    )
+    db.add(session)
+    await db.flush()
+
+    # 保存用户消息
+    user_msg = ChatMessage(
+        session_id=session.id,
+        role="user",
+        content=data.user_message,
+    )
+    db.add(user_msg)
+
+    # 保存 AI 回复
+    assistant_msg = ChatMessage(
+        session_id=session.id,
+        role="assistant",
+        content=data.assistant_message,
+        source="open",
+    )
+    db.add(assistant_msg)
+    await db.flush()
+
+    return DeepDiscussResponse(
+        session_id=session.id,
+        notebook_id=notebook_id,
+        title=session.title,
+    )

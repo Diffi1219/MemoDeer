@@ -127,6 +127,21 @@ class ChatMessageOut(BaseModel):
         from_attributes = True
 
 
+# ─── 深度探讨 ───────────────────────────────────────────
+
+class DeepDiscussRequest(BaseModel):
+    notebook_id: str
+    title: str = Field(default="深度探讨", max_length=100)
+    user_message: str = Field(..., min_length=1)
+    assistant_message: str = Field(..., min_length=1)
+
+
+class DeepDiscussResponse(BaseModel):
+    session_id: str
+    notebook_id: str
+    title: str
+
+
 # ─── 检索 ───────────────────────────────────────────
 
 class SearchRequest(BaseModel):

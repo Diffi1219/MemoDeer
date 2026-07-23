@@ -10,11 +10,12 @@ interface MarkdownEditorProps {
   onSave: (content: string) => Promise<void>
   onRevectorize?: () => void
   readOnly?: boolean
+  notebookId?: string
 }
 
 export default function MarkdownEditor({
   fileName, content: initialContent,
-  needsRevectorize, onSave, onRevectorize, readOnly,
+  needsRevectorize, onSave, onRevectorize, readOnly, notebookId,
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [text, setText] = useState(initialContent)
@@ -145,7 +146,7 @@ export default function MarkdownEditor({
         {/* 预览模式 */}
         {mode === 'view' && (
           <div className="h-full overflow-y-auto">
-            <SelectionAsk>
+            <SelectionAsk notebookId={notebookId}>
               <article className="prose prose-sm max-w-none px-6 py-4">
                 <ObsidianMarkdown content={text} />
               </article>

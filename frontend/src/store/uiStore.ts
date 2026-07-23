@@ -29,6 +29,8 @@ interface UIState {
   setApiBaseUrl: (url: string) => void
   sidebarWidth: number
   setSidebarWidth: (w: number) => void
+  sidebarCollapsed: boolean
+  toggleSidebar: () => void
   activeFileId: string | null
   setActiveFile: (id: string | null) => void
   pendingVectorizeCount: number
@@ -54,6 +56,8 @@ export const useUIStore = create<UIState>((set) => ({
   },
   sidebarWidth: 260,
   setSidebarWidth: (w) => set({ sidebarWidth: w }),
+  sidebarCollapsed: false,
+  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   activeFileId: null,
   setActiveFile: (id) => set({ activeFileId: id }),
   pendingVectorizeCount: 0,

@@ -63,9 +63,19 @@ export default function ChatPage() {
       </header>
 
       {showSessions && (
-        <div className="absolute top-12 right-0 w-72 bg-white shadow-xl rounded-xl border z-20 max-h-80 overflow-y-auto m-2">
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setShowSessions(false)} />
+          <div className="absolute top-12 right-0 w-72 bg-white shadow-xl rounded-xl border z-20 max-h-80 overflow-y-auto m-2">
           <div className="p-2">
-            <h3 className="text-xs font-semibold text-surface-400 px-3 py-2">历史对话</h3>
+            <div className="flex items-center justify-between px-3 py-2">
+              <h3 className="text-xs font-semibold text-surface-400">历史对话</h3>
+              <button
+                onClick={() => setShowSessions(false)}
+                className="p-1 hover:bg-surface-100 rounded text-surface-400 hover:text-surface-600"
+              >
+                <X size={14} />
+              </button>
+            </div>
             {sessions.length === 0 ? (
               <p className="text-xs text-surface-400 px-3 py-4">暂无对话</p>
             ) : (
@@ -88,13 +98,16 @@ export default function ChatPage() {
             )}
           </div>
         </div>
+        </>
       )}
 
-      <ChatPanel
-        notebookId={notebookId!}
-        sessionId={sid || null}
-        onSaveNote={(content) => { setEditingNote('note'); setNoteContent(content) }}
-      />
+      <div className="flex-1 min-h-0">
+        <ChatPanel
+          notebookId={notebookId!}
+          sessionId={sid || null}
+          onSaveNote={(content) => { setEditingNote('note'); setNoteContent(content) }}
+        />
+      </div>
 
       {/* 编辑笔记弹窗 */}
       {editingNote && (

@@ -4,6 +4,9 @@ import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, FileText, Plus } from 'lucide-react'
 import apiClient, { getApiUrl } from '../../api/client'
 import GenUI from '../common/GenUI'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import rehypeRaw from 'rehype-raw'
 
 /** 预处理 Obsidian 语法 */
 function preprocessObsidian(text: string): string {
@@ -340,6 +343,8 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                   )}
                   <div className="text-sm prose prose-sm max-w-none">
                   <ReactMarkdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex, rehypeRaw]}
                     components={{
                       code({ className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || '')
@@ -370,20 +375,45 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                       // ── Obsidian: Callout ──
                       blockquote({ children, ...props }) {
                         const node = (props as any).node
-                        const firstChild = node?.children?.[0]?.children?.[0]
-                        const text = firstChild?.value || ''
-                        const calloutMatch = text.match(/^\[!(\w+)\]\s*(.*)/)
+                        const rawText = (() => {
+                          try {
+                            const walk = (n: any): string => {
+                              if (!n) return ''
+                              if (n.type === 'text' || n.type === 'raw') return n.value || ''
+                              if (n.children) return n.children.map(walk).join('')
+                              return ''
+                            }
+                            return walk(node)
+                          } catch { return '' }
+                        })()
+                        const calloutMatch = rawText.trimStart().match(/^\[!(\w+)\]\s*(.*)/)
                         if (calloutMatch) {
                           const type = calloutMatch[1].toLowerCase()
                           const title = calloutMatch[2] || type.charAt(0).toUpperCase() + type.slice(1)
                           const style = CALLOUT_STYLES[type] || CALLOUT_STYLES.note
                           const childrenArr = Array.isArray(children) ? children : [children]
+                          // 过滤 callout 首行 [type] title
+                          const contentChildren = childrenArr.map((child: any) => {
+                            if (child?.type === 'p' && Array.isArray(child.props?.children)) {
+                              const filtered = (child.props.children as any[])
+                                .map((tc: any) => {
+                                  if (typeof tc === 'string' && tc.includes('[!')) {
+                                    const nl = tc.indexOf('\n')
+                                    return nl >= 0 ? tc.slice(nl + 1) : ''
+                                  }
+                                  return tc
+                                })
+                                .filter((s: any) => typeof s !== 'string' || s.trim())
+                              return { ...child, props: { ...child.props, children: filtered } }
+                            }
+                            return child
+                          }).filter((c: any) => typeof c !== 'string' || c.trim())
                           return (
                             <div className={`${style.bg} border-l-4 ${style.border} rounded-r-lg p-3 my-2`}>
                               <div className="flex items-center gap-1.5 font-semibold text-xs mb-1 text-surface-700">
                                 <span>{style.icon}</span><span>{title}</span>
                               </div>
-                              <div className="text-xs text-surface-600">{childrenArr.slice(1)}</div>
+                              <div className="text-xs text-surface-600">{contentChildren}</div>
                             </div>
                           )
                         }
