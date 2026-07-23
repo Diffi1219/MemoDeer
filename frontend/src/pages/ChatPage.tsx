@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import apiClient from '../api/client'
-import { ArrowLeft, Plus, MessageSquare, Trash2, Menu, Save, X, Loader2 } from 'lucide-react'
+import { Plus, MessageSquare, Trash2, Menu, Save, X, Loader2 } from 'lucide-react'
 import { useUIStore } from '../store/uiStore'
 import ChatPanel from '../components/chat/ChatPanel'
+import PageHeader from '../components/layout/PageHeader'
 
 interface Session {
   id: string; notebook_id: string; title: string; message_count: number; updated_at: string
@@ -46,26 +47,26 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white">
-      <header className="flex items-center gap-2 px-4 py-3 border-b border-surface-200 bg-white z-10">
-        <button onClick={() => navigate(`/notebook/${notebookId}`)} className="p-2 hover:bg-surface-100 rounded-lg">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="font-semibold text-sm truncate">{notebookTitle}</h1>
-        </div>
-        <button onClick={() => setShowSessions(!showSessions)} className="p-2 hover:bg-surface-100 rounded-lg" title="历史会话">
-          <MessageSquare size={20} />
-        </button>
-        <button onClick={toggleDrawer} className="p-2 hover:bg-surface-100 rounded-lg">
-          <Menu size={20} />
-        </button>
-      </header>
+    <div className="h-full flex flex-col bg-surface-0">
+      <PageHeader
+        title={notebookTitle}
+        onBack={() => navigate(`/notebook/${notebookId}`)}
+        actions={
+          <>
+            <button onClick={() => setShowSessions(!showSessions)} className="p-2 hover:bg-surface-100 rounded-lg btn-press" title="历史会话">
+              <MessageSquare size={20} />
+            </button>
+            <button onClick={toggleDrawer} className="p-2 hover:bg-surface-100 rounded-lg btn-press">
+              <Menu size={20} />
+            </button>
+          </>
+        }
+      />
 
       {showSessions && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setShowSessions(false)} />
-          <div className="absolute top-12 right-0 w-72 bg-white shadow-xl rounded-xl border z-20 max-h-80 overflow-y-auto m-2">
+          <div className="absolute top-12 right-0 w-72 bg-surface-0 shadow-xl rounded-xl border z-20 max-h-80 overflow-y-auto m-2">
           <div className="p-2">
             <div className="flex items-center justify-between px-3 py-2">
               <h3 className="text-xs font-semibold text-surface-400">历史对话</h3>
@@ -90,8 +91,8 @@ export default function ChatPage() {
                     <p className="text-sm truncate">{s.title}</p>
                     <p className="text-xs text-surface-300">{s.message_count} 条消息</p>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id) }} className="p-1 hover:bg-red-50 rounded">
-                    <Trash2 size={14} className="text-surface-300 hover:text-red-500" />
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id) }} className="p-1 hover:bg-danger-light/50 rounded">
+                    <Trash2 size={14} className="text-surface-300 hover:text-danger" />
                   </button>
                 </div>
               ))
@@ -112,7 +113,7 @@ export default function ChatPage() {
       {/* 编辑笔记弹窗 */}
       {editingNote && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={() => setEditingNote(null)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg p-6 max-h-[80vh] flex flex-col shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg p-6 max-h-[80vh] flex flex-col shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">编辑笔记内容</h3>
               <button onClick={() => setEditingNote(null)} className="p-1 hover:bg-surface-100 rounded-lg"><X size={20} /></button>
@@ -151,12 +152,12 @@ export default function ChatPage() {
       {/* 删除确认弹窗 */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDeleteConfirm(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2">删除此对话？</h3>
             <p className="text-sm text-surface-500 mb-6">删除后对话记录将无法恢复。</p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">删除</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-600">删除</button>
             </div>
           </div>
         </div>

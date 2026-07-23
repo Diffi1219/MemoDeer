@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 
 export type ColorTheme = 'blue' | 'purple' | 'orange' | 'green' | 'pink'
+export type ThemeMode = 'light' | 'dark' | 'system'
+export type ToastType = 'success' | 'error' | 'info' | 'warning'
+
+export interface Toast {
+  id: string
+  message: string
+  type: ToastType
+  duration?: number
+}
 
 function getInitialTheme(): ColorTheme {
   const stored = localStorage.getItem('colorTheme')
@@ -10,9 +19,35 @@ function getInitialTheme(): ColorTheme {
   return 'blue'
 }
 
+function getInitialThemeMode(): ThemeMode {
+  const stored = localStorage.getItem('themeMode')
+  if (stored && ['light', 'dark', 'system'].includes(stored)) {
+    return stored as ThemeMode
+  }
+  return 'system'
+}
+
 function applyTheme(theme: ColorTheme) {
   localStorage.setItem('colorTheme', theme)
   document.documentElement.dataset.theme = theme
+}
+
+function applyThemeMode(mode: ThemeMode) {
+  localStorage.setItem('themeMode', mode)
+
+  if (mode === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    document.documentElement.dataset.themeMode = prefersDark ? 'dark' : 'light'
+  } else {
+    document.documentElement.dataset.themeMode = mode
+  }
+}
+
+function getResolvedThemeMode(mode: ThemeMode): 'light' | 'dark' {
+  if (mode === 'system') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  }
+  return mode
 }
 
 interface UIState {
@@ -37,9 +72,15 @@ interface UIState {
   setPendingVectorizeCount: (n: number) => void
   colorTheme: ColorTheme
   setColorTheme: (theme: ColorTheme) => void
+  themeMode: ThemeMode
+  setThemeMode: (mode: ThemeMode) => void
+  resolvedThemeMode: () => 'light' | 'dark'
+  toasts: Toast[]
+  addToast: (message: string, type?: ToastType, duration?: number) => void
+  removeToast: (id: string) => void
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   isDrawerOpen: false,
   isUploadOpen: false,
   isGlobalSearchOpen: false,
@@ -67,4 +108,17 @@ export const useUIStore = create<UIState>((set) => ({
     applyTheme(theme)
     set({ colorTheme: theme })
   },
+  themeMode: getInitialThemeMode(),
+  setThemeMode: (mode) => {
+    applyThemeMode(mode)
+    set({ themeMode: mode })
+  },
+  resolvedThemeMode: () => getResolvedThemeMode(get().themeMode),
+  toasts: [],
+  addToast: (message, type = 'info', duration = 3000) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    set((s) => ({ toasts: [...s.toasts, { id, message, type, duration }] }))
+    if (duration > 0) setTimeout(() => get().removeToast(id), duration)
+  },
+  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))

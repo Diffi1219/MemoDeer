@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, Search, MessageCircle, Brain, FileText, Sparkles, GraduationCap, Layers } from 'lucide-react'
+import { Upload, Search, MessageCircle, Brain, FileText, Sparkles, GraduationCap, Layers } from 'lucide-react'
+import PageHeader from '../components/layout/PageHeader'
 
 const features = [
   { icon: Upload, title: '文档上传', desc: '支持 PDF、DOCX、TXT、MD，上传后 AI 自动格式化', color: 'text-blue-500', bg: 'bg-blue-50' },
-  { icon: Brain, title: '知识提取', desc: 'AI 自动从文档中提取结构化知识点', color: 'text-amber-500', bg: 'bg-amber-50' },
+  { icon: Brain, title: '知识提取', desc: 'AI 自动从文档中提取结构化知识点', color: 'text-accent', bg: 'bg-accent-light/40' },
   { icon: MessageCircle, title: '智能问答', desc: '基于你的知识库精准回答，找不到时自动用通用知识补充', color: 'text-green-500', bg: 'bg-green-50' },
   { icon: Search, title: '全局搜索', desc: '跨所有笔记本搜索，快速定位所需知识', color: 'text-purple-500', bg: 'bg-purple-50' },
   { icon: GraduationCap, title: 'AI 出题', desc: '一键生成选择题和填空题，检验学习效果', color: 'text-orange-500', bg: 'bg-orange-50' },
@@ -23,16 +24,11 @@ export default function AboutPage() {
 
   return (
     <div className="h-full flex flex-col bg-surface-50">
-      <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-surface-200">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-lg">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="font-semibold text-lg">关于 MemoDeer</h1>
-      </header>
+      <PageHeader title="关于 MemoDeer" onBack={() => navigate(-1)} />
 
       <div className="flex-1 overflow-y-auto">
         {/* Hero */}
-        <div className="text-center px-6 py-8 bg-gradient-to-b from-primary-50 to-white">
+        <div className="text-center px-6 py-8 bg-gradient-to-b from-primary-50 to-surface-0">
           <div className="w-20 h-20 bg-primary-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-200">
             <Sparkles size={36} className="text-white" />
           </div>
@@ -60,7 +56,7 @@ export default function AboutPage() {
         {/* Usage Flow */}
         <div className="px-4 py-6">
           <h3 className="text-sm font-semibold text-surface-500 mb-4 text-center">三步开始</h3>
-          <div className="bg-white rounded-2xl border border-surface-200 p-5">
+          <div className="bg-surface-0 rounded-2xl border border-surface-200 p-5">
             <div className="flex flex-col sm:flex-row gap-4">
               {steps.map((s, i) => (
                 <div key={s.step} className="flex-1 flex sm:flex-col items-center sm:text-center gap-3 sm:gap-2">
@@ -85,7 +81,7 @@ export default function AboutPage() {
           <h3 className="text-sm font-semibold text-surface-500 mb-3 text-center">技术栈</h3>
           <div className="flex flex-wrap justify-center gap-2">
             {techs.map((t) => (
-              <span key={t} className="text-xs px-3 py-1.5 bg-white border border-surface-200 rounded-full text-surface-500 font-medium">
+              <span key={t} className="text-xs px-3 py-1.5 bg-surface-0 border border-surface-200 rounded-full text-surface-500 font-medium">
                 {t}
               </span>
             ))}

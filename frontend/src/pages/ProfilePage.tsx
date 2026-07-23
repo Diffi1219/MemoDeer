@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Crown, BookOpen, FileText, MessageCircle, Flame, Edit3, Check, X as XIcon, Loader2 } from 'lucide-react'
+import { Crown, BookOpen, FileText, MessageCircle, Flame, Edit3, Check, X as XIcon, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
+import PageHeader from '../components/layout/PageHeader'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -62,16 +63,11 @@ export default function ProfilePage() {
 
   return (
     <div className="h-full flex flex-col bg-surface-50">
-      <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-surface-200">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-lg">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="font-semibold text-lg">我的</h1>
-      </header>
+      <PageHeader title="我的" onBack={() => navigate(-1)} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-8">
         {/* Profile Card */}
-        <div className="bg-white rounded-2xl border border-surface-200 p-5">
+        <div className="bg-surface-0 rounded-2xl border border-surface-200 p-5">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xl font-bold text-primary-500">
@@ -90,16 +86,16 @@ export default function ProfilePage() {
           </div>
 
           {/* Membership status */}
-          <div className={`mt-4 p-3 rounded-xl flex items-center justify-between ${isPremium ? 'bg-amber-50 border border-amber-200' : 'bg-surface-50'}`}>
+          <div className={`mt-4 p-3 rounded-xl flex items-center justify-between ${isPremium ? 'bg-accent-light/30 border border-accent/20' : 'bg-surface-50'}`}>
             <div className="flex items-center gap-2">
-              <Crown size={18} className={isPremium ? 'text-amber-500' : 'text-surface-300'} />
+              <Crown size={18} className={isPremium ? 'text-accent' : 'text-surface-300'} />
               <div>
-                <span className={`text-sm font-medium ${isPremium ? 'text-amber-700' : 'text-surface-500'}`}>{premiumLabel}</span>
+                <span className={`text-sm font-medium ${isPremium ? 'text-accent-dark' : 'text-surface-500'}`}>{premiumLabel}</span>
                 {expireLabel && <p className="text-xs text-surface-400">{expireLabel}</p>}
               </div>
             </div>
             {!isPremium && (
-              <button onClick={() => navigate('/membership')} className="text-xs px-3 py-1 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600">
+              <button onClick={() => navigate('/membership')} className="text-xs px-3 py-1 bg-accent text-white rounded-lg font-medium hover:bg-accent-dark btn-press">
                 升级
               </button>
             )}
@@ -123,7 +119,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Personal Info */}
-        <div className="bg-white rounded-2xl border border-surface-200 overflow-hidden">
+        <div className="bg-surface-0 rounded-2xl border border-surface-200 overflow-hidden">
           <h3 className="text-sm font-semibold text-surface-600 px-4 py-3 border-b border-surface-100">个人信息</h3>
           {[
             { label: '用户名', value: user?.username || '', field: 'username', editable: false },
@@ -164,7 +160,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Membership Benefits */}
-        <div className="bg-white rounded-2xl border border-surface-200 overflow-hidden">
+        <div className="bg-surface-0 rounded-2xl border border-surface-200 overflow-hidden">
           <h3 className="text-sm font-semibold text-surface-600 px-4 py-3 border-b border-surface-100">会员权益</h3>
           <div className="p-4 space-y-2">
             {[
@@ -184,7 +180,7 @@ export default function ProfilePage() {
                   <span className={`text-xs ${row.free ? 'text-green-500' : 'text-surface-300'}`}>
                     {row.free ? '免费' : '—'}
                   </span>
-                  <span className={`text-xs ${row.premium ? 'text-amber-500' : 'text-surface-300'}`}>
+                  <span className={`text-xs ${row.premium ? 'text-accent' : 'text-surface-300'}`}>
                     {row.premium ? '会员' : '—'}
                   </span>
                 </div>
@@ -193,7 +189,7 @@ export default function ProfilePage() {
           </div>
           {!isPremium && (
             <div className="px-4 pb-4">
-              <button onClick={() => navigate('/membership')} className="w-full py-2.5 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 flex items-center justify-center gap-2">
+              <button onClick={() => navigate('/membership')} className="w-full py-2.5 bg-accent text-white text-sm font-medium rounded-xl hover:bg-accent-dark flex items-center justify-center gap-2 btn-press">
                 <Crown size={16} /> 升级解锁全部权益
               </button>
             </div>

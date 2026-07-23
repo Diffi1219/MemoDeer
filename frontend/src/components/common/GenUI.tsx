@@ -53,7 +53,7 @@ export default function GenUI({ data }: GenUIProps) {
   switch (data.type) {
     case 'concept-card':
       return (
-        <div className="my-4 rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50/50 to-white overflow-hidden">
+        <div className="my-4 rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50/50 to-surface-0 overflow-hidden">
           {/* 头部 */}
           <div className="px-4 py-3 border-b border-primary-100 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -97,15 +97,15 @@ export default function GenUI({ data }: GenUIProps) {
 
     case 'key-points':
       return (
-        <div className="my-4 rounded-2xl border border-amber-200 bg-amber-50/40 overflow-hidden">
-          <div className="px-4 py-3 border-b border-amber-100 flex items-center gap-2">
-            <ListChecks size={18} className="text-amber-500" />
-            <h4 className="font-semibold text-sm text-amber-800">{data.title || '关键要点'}</h4>
+        <div className="my-4 rounded-2xl border border-warning/30 bg-warning-light/30 overflow-hidden">
+          <div className="px-4 py-3 border-b border-warning/20 flex items-center gap-2">
+            <ListChecks size={18} className="text-warning" />
+            <h4 className="font-semibold text-sm text-warning-700 dark:text-warning-400">{data.title || '关键要点'}</h4>
           </div>
           <div className="px-4 py-3 space-y-2">
             {data.items?.map((item, i) => (
               <div key={i} className="flex items-start gap-2 text-sm">
-                <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-700 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                <span className="w-5 h-5 rounded-full bg-warning/20 text-warning-700 dark:text-warning-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                   {i + 1}
                 </span>
                 <span className="text-surface-700">{item.text}</span>
@@ -117,7 +117,7 @@ export default function GenUI({ data }: GenUIProps) {
 
     case 'comparison':
       return (
-        <div className="my-4 rounded-2xl border border-surface-200 bg-white overflow-hidden">
+        <div className="my-4 rounded-2xl border border-surface-200 bg-surface-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-surface-100 flex items-center gap-2">
             <GitCompare size={18} className="text-indigo-500" />
             <h4 className="font-semibold text-sm text-surface-800">{data.title || '对比'}</h4>
@@ -151,29 +151,29 @@ export default function GenUI({ data }: GenUIProps) {
 
     case 'steps':
       return (
-        <div className="my-4 rounded-2xl border border-green-200 bg-green-50/30 overflow-hidden">
-          <div className="px-4 py-3 border-b border-green-100 flex items-center gap-2">
+        <div className="my-4 rounded-2xl border border-green-200 bg-green-50/30 dark:bg-green-950/20 overflow-hidden">
+          <div className="px-4 py-3 border-b border-green-100 dark:border-green-800 flex items-center gap-2">
             <ListOrdered size={18} className="text-green-500" />
-            <h4 className="font-semibold text-sm text-green-800">{data.title || '步骤指南'}</h4>
+            <h4 className="font-semibold text-sm text-green-800 dark:text-green-400">{data.title || '步骤指南'}</h4>
           </div>
           <div className="px-4 py-3 space-y-3">
             {data.steps?.map((step, i) => (
               <div key={i} className="flex gap-3">
                 {/* 序号圆圈 */}
                 <div className="flex flex-col items-center">
-                  <div className="w-7 h-7 rounded-full bg-green-200 text-green-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300 flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {i + 1}
                   </div>
                   {i < (data.steps?.length || 0) - 1 && (
-                    <div className="w-0.5 flex-1 bg-green-200 mt-1" />
+                    <div className="w-0.5 flex-1 bg-green-200 dark:bg-green-800 mt-1" />
                   )}
                 </div>
                 <div className="pb-2">
                   <p className="text-sm text-surface-700 leading-relaxed">{step.text}</p>
                   {step.tip && (
                     <div className="mt-1 flex items-start gap-1.5">
-                      <Lightbulb size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs text-amber-600">{step.tip}</span>
+                      <Lightbulb size={14} className="text-warning flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-warning-700 dark:text-warning-400">{step.tip}</span>
                     </div>
                   )}
                 </div>
@@ -185,10 +185,10 @@ export default function GenUI({ data }: GenUIProps) {
 
     case 'example-box':
       return (
-        <div className="my-4 rounded-2xl border border-blue-200 bg-blue-50/40 overflow-hidden">
-          <div className="px-4 py-3 border-b border-blue-100 flex items-center gap-2">
+        <div className="my-4 rounded-2xl border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 overflow-hidden">
+          <div className="px-4 py-3 border-b border-blue-100 dark:border-blue-800 flex items-center gap-2">
             <Lightbulb size={18} className="text-blue-500" />
-            <h4 className="font-semibold text-sm text-blue-800">{data.title || '示例'}</h4>
+            <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-400">{data.title || '示例'}</h4>
           </div>
           {data.text && (
             <div className="px-4 py-3 text-sm text-surface-700 leading-relaxed">

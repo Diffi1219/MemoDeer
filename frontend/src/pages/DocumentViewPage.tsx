@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle, Eye, Edit3, Save, RefreshCw } from 'lucide-react'
+import { Loader2, AlertCircle, Eye, Edit3, Save, RefreshCw } from 'lucide-react'
 import ObsidianMarkdown from '../components/common/ObsidianMarkdown'
 import SelectionAsk from '../components/common/SelectionAsk'
 import apiClient from '../api/client'
+import PageHeader from '../components/layout/PageHeader'
 
 interface ChunkData {
   id: string
@@ -129,7 +130,7 @@ export default function DocumentViewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-surface-0 flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={32} className="animate-spin text-primary-500 mx-auto mb-3" />
           <p className="text-surface-400 text-sm">加载文档中...</p>
@@ -140,9 +141,9 @@ export default function DocumentViewPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-surface-0 flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <AlertCircle size={48} className="text-red-400 mx-auto mb-3" />
+          <AlertCircle size={48} className="text-danger/60 mx-auto mb-3" />
           <p className="text-surface-700 font-medium mb-1">加载失败</p>
           <p className="text-surface-400 text-sm mb-4">{error}</p>
           <button onClick={() => navigate(-1)} className="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm hover:bg-primary-600">
@@ -156,55 +157,50 @@ export default function DocumentViewPage() {
   if (!doc) return null
 
   return (
-    <div className="h-screen bg-white flex flex-col">
+    <div className="h-screen bg-surface-0 flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2.5 border-b border-surface-200 bg-white/95 backdrop-blur-sm">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-lg flex-shrink-0" title="返回">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-semibold text-sm truncate">{doc.document_name}</h1>
-          <p className="text-xs text-surface-400">
-            {mode === 'view' ? '阅读模式' : '编辑模式'} · {doc.chunks.length} 段
-          </p>
-        </div>
-        {highlightChunkId && mode === 'view' && (
-          <span className="text-xs px-2 py-1 bg-warning-50 text-warning-700 rounded-full flex-shrink-0 hidden sm:inline">
-            已定位
-          </span>
-        )}
-        {/* 模式切换按钮 */}
-        <button
-          onClick={() => {
-            if (mode === 'view') {
-              // 进入编辑模式前刷新 rawText（以防 chunk 数据变了）
-              const t = doc.chunks.map(c => c.content).join('\n\n')
-              setRawText(t)
-              setMode('edit')
-            } else {
-              setMode('view')
-            }
-          }}
-          className="p-2 hover:bg-surface-100 rounded-lg transition-colors flex-shrink-0"
-          title={mode === 'view' ? '编辑' : '预览'}
-        >
-          {mode === 'view' ? <Edit3 size={18} /> : <Eye size={18} />}
-        </button>
-        {/* Save */}
-        <button
-          onClick={handleSave}
-          disabled={mode === 'view' || saving}
-          className="p-2 hover:bg-primary-50 rounded-lg transition-colors flex-shrink-0 text-primary-500 disabled:text-surface-300"
-          title="保存"
-        >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-        </button>
-      </header>
+      <PageHeader
+        title={doc.document_name}
+        subtitle={`${mode === 'view' ? '阅读模式' : '编辑模式'} · ${doc.chunks.length} 段`}
+        onBack={() => navigate(-1)}
+        actions={
+          <>
+            {highlightChunkId && mode === 'view' && (
+              <span className="text-xs px-2 py-1 bg-warning-50 text-warning-700 rounded-full flex-shrink-0 hidden sm:inline">
+                已定位
+              </span>
+            )}
+            <button
+              onClick={() => {
+                if (mode === 'view') {
+                  const t = doc.chunks.map(c => c.content).join('\n\n')
+                  setRawText(t)
+                  setMode('edit')
+                } else {
+                  setMode('view')
+                }
+              }}
+              className="p-2 hover:bg-surface-100 rounded-lg btn-press flex-shrink-0"
+              title={mode === 'view' ? '编辑' : '预览'}
+            >
+              {mode === 'view' ? <Edit3 size={18} /> : <Eye size={18} />}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={mode === 'view' || saving}
+              className="p-2 hover:bg-primary-50 rounded-lg btn-press flex-shrink-0 text-primary-500 disabled:text-surface-300"
+              title="保存"
+            >
+              {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            </button>
+          </>
+        }
+      />
 
       {/* Re-vectorize prompt bar */}
       {showRevectorize && (
-        <div className="sticky top-[53px] z-10 flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-50 border-b border-amber-200 text-sm">
-          <span className="text-amber-700 text-xs">
+        <div className="sticky top-[53px] z-10 flex items-center justify-between gap-2 px-4 py-2.5 bg-warning-light/40 border-b border-warning/20 text-sm">
+          <span className="text-warning-700 dark:text-warning-400 text-xs">
             📊 内容已保存。检测到内容变化，是否重新向量化以更新检索库？
           </span>
           <div className="flex gap-2 flex-shrink-0">
@@ -217,7 +213,7 @@ export default function DocumentViewPage() {
             <button
               onClick={handleRevectorize}
               disabled={vectorizing}
-              className="px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-1"
+              className="px-3 py-1 bg-warning text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 flex items-center gap-1 btn-press"
             >
               {vectorizing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               {vectorizing ? '向量化中...' : '立即向量化'}
@@ -245,7 +241,7 @@ export default function DocumentViewPage() {
                     <span
                       ref={highlightRef}
                       id="chunk-highlight"
-                      className="bg-amber-100 ring-2 ring-amber-300 rounded-md px-2 py-1 block -mx-2 my-2"
+                      className="bg-warning-light ring-2 ring-warning/30 rounded-md px-2 py-1 block -mx-2 my-2"
                     >
                       <ObsidianMarkdown content={fullText.slice(highlightStart, highlightEnd)} />
                     </span>

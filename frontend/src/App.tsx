@@ -23,10 +23,34 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const colorTheme = useUIStore((s) => s.colorTheme)
+  const themeMode = useUIStore((s) => s.themeMode)
+  const setThemeMode = useUIStore((s) => s.setThemeMode)
 
+  // 初始化主题
   useEffect(() => {
     document.documentElement.dataset.theme = colorTheme
-  }, [colorTheme])
+
+    if (themeMode === 'system') {
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      const handler = (e: MediaQueryListEvent) => {
+        document.documentElement.dataset.themeMode = e.matches ? 'dark' : 'light'
+      }
+      document.documentElement.dataset.themeMode = mq.matches ? 'dark' : 'light'
+      mq.addEventListener('change', handler)
+      return () => mq.removeEventListener('change', handler)
+    } else {
+      document.documentElement.dataset.themeMode = themeMode
+    }
+  }, [colorTheme, themeMode])
+
+  // 首次加载时确保 themeMode 被应用（即使未通过 UI 更改过）
+  useEffect(() => {
+    const stored = localStorage.getItem('themeMode')
+    if (!stored) {
+      // 用户从未设置过，应用默认值
+      setThemeMode('system')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Routes>

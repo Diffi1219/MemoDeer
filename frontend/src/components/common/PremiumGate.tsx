@@ -49,9 +49,9 @@ export default function PremiumGate({ feature, icon, description, highlights, ch
   return (
     <div className="px-4 py-6 max-w-md mx-auto">
       {/* Feature Intro Card */}
-      <div className="bg-white rounded-2xl border border-surface-200 overflow-hidden shadow-sm">
+      <div className="bg-surface-0 rounded-2xl border border-surface-200 overflow-hidden shadow-sm animate-fade-in-up">
         {/* Top gradient banner */}
-        <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 px-5 py-6 text-center">
+        <div className="bg-gradient-to-r from-accent via-accent to-accent-dark px-5 py-6 text-center">
           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
             {icon || <Sparkles size={30} className="text-white" />}
           </div>
@@ -69,7 +69,7 @@ export default function PremiumGate({ feature, icon, description, highlights, ch
             <div className="mt-4 space-y-2.5">
               {featureHighlights.map((h, i) => (
                 <div key={i} className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="w-5 h-5 rounded-full bg-accent-light/50 text-accent-dark text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                     {i + 1}
                   </span>
                   <span className="text-sm text-surface-600">{h}</span>
@@ -90,7 +90,7 @@ export default function PremiumGate({ feature, icon, description, highlights, ch
               { name: 'AI 智能出题', desc: '自动生成练习题' },
             ].map((f) => (
               <div key={f.name} className="flex items-center gap-2 text-surface-500">
-                <Crown size={10} className="text-amber-400 flex-shrink-0" />
+                <Crown size={10} className="text-accent flex-shrink-0" />
                 <span className="font-medium">{f.name}</span>
                 <span className="text-surface-300">—</span>
                 <span className="text-surface-400">{f.desc}</span>
@@ -101,25 +101,25 @@ export default function PremiumGate({ feature, icon, description, highlights, ch
 
         {/* CTA */}
         <div className="px-5 pb-5">
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+          <div className="bg-gradient-to-r from-accent-light/30 to-accent-light/20 rounded-xl p-4 border border-accent/20">
             <div className="flex items-center gap-2 mb-2">
-              <Crown size={16} className="text-amber-500" />
-              <span className="text-sm font-medium text-amber-700">高级会员专属功能</span>
+              <Crown size={16} className="text-accent" />
+              <span className="text-sm font-medium text-accent-dark">高级会员专属功能</span>
             </div>
             <div className="flex gap-3 mb-3">
               <div className="flex-1 text-center">
-                <p className="text-lg font-bold text-amber-700">¥19.9<span className="text-xs font-normal text-amber-500">/月</span></p>
-                <p className="text-[10px] text-amber-400">月付方案</p>
+                <p className="text-lg font-bold text-accent-dark">¥19.9<span className="text-xs font-normal text-accent/70">/月</span></p>
+                <p className="text-[10px] text-accent/60">月付方案</p>
               </div>
-              <div className="w-px bg-amber-200" />
+              <div className="w-px bg-accent/20" />
               <div className="flex-1 text-center">
-                <p className="text-lg font-bold text-amber-700">¥299<span className="text-xs font-normal text-amber-500"> 永久</span></p>
-                <p className="text-[10px] text-amber-400">终身方案</p>
+                <p className="text-lg font-bold text-accent-dark">¥299<span className="text-xs font-normal text-accent/70"> 永久</span></p>
+                <p className="text-[10px] text-accent/60">终身方案</p>
               </div>
             </div>
             <button
               onClick={() => navigate('/membership')}
-              className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-medium hover:from-amber-600 hover:to-orange-600 transition duration-200 flex items-center justify-center gap-2 shadow-sm"
+              className="w-full py-2.5 bg-gradient-to-r from-accent to-accent-dark text-white rounded-xl text-sm font-medium hover:from-accent-dark hover:to-accent-dark transition duration-200 flex items-center justify-center gap-2 shadow-sm btn-press"
             >
               <Crown size={14} />
               立即开通会员

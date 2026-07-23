@@ -91,13 +91,13 @@ export default function MarkdownEditor({
   return (
     <div className="flex flex-col h-full">
       {/* 工具栏 */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-surface-200 bg-white/90 backdrop-blur-sm sticky top-0 z-10">
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-surface-200 bg-surface-0/90 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-0.5 bg-surface-100 rounded-lg p-0.5">
           <button
             onClick={() => setMode('view')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               mode === 'view'
-                ? 'bg-white text-primary-600 shadow-sm'
+                ? 'bg-surface-0 text-primary-600 shadow-sm'
                 : 'text-surface-400 hover:text-surface-600'
             }`}
           >
@@ -109,7 +109,7 @@ export default function MarkdownEditor({
               onClick={() => { setMode('edit'); setTimeout(() => textareaRef.current?.focus(), 50) }}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 mode === 'edit'
-                  ? 'bg-white text-primary-600 shadow-sm'
+                  ? 'bg-surface-0 text-primary-600 shadow-sm'
                   : 'text-surface-400 hover:text-surface-600'
               }`}
             >
@@ -182,7 +182,7 @@ export default function MarkdownEditor({
               onChange={(e) => setText(e.target.value)}
               onScroll={handleScroll}
               onKeyDown={handleTab}
-              className="flex-1 p-3 border-none outline-none resize-none text-[14px] leading-[21px] text-surface-800 bg-white"
+              className="flex-1 p-3 border-none outline-none resize-none text-[14px] leading-[21px] text-surface-800 bg-surface-0"
               style={{ fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace' }}
               spellCheck={false}
               placeholder="开始编写 Markdown..."
@@ -196,7 +196,7 @@ export default function MarkdownEditor({
         <span>{lineCount} 行</span>
         <span>{charCount.toLocaleString()} 字</span>
         {isModified && (
-          <span className="text-amber-500 font-medium">未保存的修改</span>
+          <span className="text-warning font-medium">未保存的修改</span>
         )}
         {needsRevectorize && !isModified && (
           <span className="text-orange-500 font-medium flex items-center gap-1">

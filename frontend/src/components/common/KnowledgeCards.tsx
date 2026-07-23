@@ -115,7 +115,7 @@ export default function KnowledgeCards({ notebookId }: Props) {
                       toggleFlip(card.id)
                     }
                   }}
-                  className="bg-white rounded-xl border border-surface-200 p-4 cursor-pointer hover:border-primary-300 hover:shadow-sm transition duration-200 active:scale-[0.97]"
+                  className="bg-surface-0 rounded-xl border border-surface-200 p-4 cursor-pointer hover:border-primary-300 hover:shadow-sm transition duration-200 active:scale-[0.97] card-lift"
                 >
                   <h4 className="text-sm font-semibold text-surface-800 mb-1.5">{card.title}</h4>
                   <p className="text-xs text-surface-500 leading-relaxed line-clamp-3">
@@ -155,7 +155,7 @@ export default function KnowledgeCards({ notebookId }: Props) {
       {/* Mobile preview modal */}
       {previewCard && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:hidden justify-center" onClick={() => setPreviewCard(null)}>
-          <div className="bg-white rounded-t-2xl w-full p-6 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl w-full p-6 max-h-[70vh] overflow-y-auto animate-modal-sheet" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">{previewCard.title}</h3>
               <button onClick={() => setPreviewCard(null)} className="p-1"><XIcon size={20} /></button>

@@ -48,17 +48,17 @@ export default function PendingVectorizeBar({ notebookId, items, onRefresh }: Pe
   const remaining = items.length - visibleItems.length
 
   return (
-    <div className="border-t border-amber-200 bg-amber-50/80 backdrop-blur-sm px-3 py-2">
+    <div className="border-t border-warning/30 bg-warning-light/30 backdrop-blur-sm px-3 py-2 animate-fade-in-up">
       <div className="flex items-center gap-2 flex-wrap">
-        <AlertTriangle size={14} className="text-amber-500 flex-shrink-0" />
-        <span className="text-xs text-amber-700 font-medium">
+        <AlertTriangle size={14} className="text-warning flex-shrink-0" />
+        <span className="text-xs text-warning-700 dark:text-warning-400 font-medium">
           待向量化 ({items.length}):
         </span>
 
         {visibleItems.map((item) => (
           <span
             key={item.document_id}
-            className="inline-flex items-center gap-1 text-xs bg-white/80 text-surface-600 px-2 py-0.5 rounded-full border border-surface-200"
+            className="inline-flex items-center gap-1 text-xs bg-surface-0/80 text-surface-600 px-2 py-0.5 rounded-full border border-surface-200"
           >
             {item.filename}
             <button
@@ -81,7 +81,7 @@ export default function PendingVectorizeBar({ notebookId, items, onRefresh }: Pe
         <button
           onClick={handleVectorizeAll}
           disabled={vectorizing}
-          className="ml-auto flex items-center gap-1 px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors btn-press"
+          className="ml-auto flex items-center gap-1 px-3 py-1 bg-warning text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors btn-press"
         >
           {vectorizing ? (
             <Loader2 size={12} className="animate-spin" />

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Crown, Check, Loader2, Sparkles, Infinity } from 'lucide-react'
+import { Crown, Check, Loader2, Sparkles, Infinity } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
+import PageHeader from '../components/layout/PageHeader'
 
 const plans = [
   {
@@ -80,16 +81,11 @@ export default function MembershipPage() {
         : ''
     return (
       <div className="h-full overflow-y-auto bg-surface-50">
-        <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-surface-200">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-lg">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="font-semibold text-lg">会员中心</h1>
-        </header>
+        <PageHeader title="会员中心" onBack={() => navigate(-1)} />
 
         <div className="max-w-lg mx-auto px-4 py-12 text-center">
-          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Crown size={36} className="text-amber-500" />
+          <div className="w-20 h-20 bg-accent-light/40 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Crown size={36} className="text-accent" />
           </div>
           <h2 className="text-xl font-bold text-surface-800 mb-2">
             {premiumType === 'lifetime' ? '👑 终身会员' : '⭐ 高级会员'}
@@ -109,18 +105,12 @@ export default function MembershipPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-surface-50">
-      {/* Header */}
-      <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-surface-200">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-lg">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="font-semibold text-lg">会员中心</h1>
-      </header>
+      <PageHeader title="会员中心" onBack={() => navigate(-1)} />
 
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
         {/* Hero */}
         <div className="text-center mb-8">
-          <Sparkles size={40} className="text-amber-500 mx-auto mb-3" />
+          <Sparkles size={40} className="text-accent mx-auto mb-3" />
           <h2 className="text-2xl font-bold text-surface-800 mb-1">解锁全部学习功能</h2>
           <p className="text-surface-400 text-sm">
             升级会员，享受 AI 出题、知识卡片、记忆口诀等高级功能
@@ -130,7 +120,7 @@ export default function MembershipPage() {
         {/* Plan Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           {/* Free Plan */}
-          <div className="bg-white rounded-2xl border border-surface-200 p-6 flex flex-col">
+          <div className="bg-surface-0 rounded-2xl border border-surface-200 p-6 flex flex-col">
             <h3 className="text-lg font-semibold text-surface-700 mb-1">免费版</h3>
             <p className="text-3xl font-bold text-surface-800 mb-1">¥0</p>
             <p className="text-xs text-surface-400 mb-4">永久免费</p>
@@ -154,20 +144,20 @@ export default function MembershipPage() {
             return (
               <div
                 key={plan.key}
-                className={`bg-white rounded-2xl border-2 p-6 flex flex-col cursor-pointer transition duration-200 ${
+                className={`bg-surface-0 rounded-2xl border-2 p-6 flex flex-col cursor-pointer transition duration-200 card-lift ${
                   isSelected
-                    ? 'border-amber-400 shadow-lg shadow-amber-100'
-                    : 'border-surface-200 hover:border-amber-200'
+                    ? 'border-accent shadow-lg shadow-accent/20'
+                    : 'border-surface-200 hover:border-accent/30'
                 }`}
                 onClick={() => setSelectedPlan(plan.key)}
               >
                 {plan.badge && (
-                  <span className="self-end text-xs px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium mb-2">
+                  <span className="self-end text-xs px-2 py-0.5 bg-accent-light/40 text-accent-dark rounded-full font-medium mb-2">
                     {plan.badge}
                   </span>
                 )}
                 <div className="flex items-center gap-2 mb-1">
-                  <Icon size={20} className={plan.color === 'purple' ? 'text-purple-500' : 'text-amber-500'} />
+                  <Icon size={20} className={plan.color === 'purple' ? 'text-purple-500' : 'text-accent'} />
                   <h3 className="text-lg font-semibold text-surface-700">{plan.name}</h3>
                 </div>
                 <p className="text-3xl font-bold text-surface-800 mb-1">
@@ -195,10 +185,10 @@ export default function MembershipPage() {
                 setSelectedPlan(plan.key)
                 setShowPayment(true)
               }}
-              className={`flex-1 py-3 rounded-xl font-medium transition duration-200 flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 rounded-xl font-medium transition duration-200 flex items-center justify-center gap-2 btn-press ${
                 plan.key === 'lifetime'
                   ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-200'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200'
+                  : 'bg-gradient-to-r from-accent to-accent-dark text-white hover:from-accent-dark hover:to-accent-dark shadow-lg shadow-accent/20'
               }`}
             >
               <plan.icon size={18} />
@@ -211,12 +201,12 @@ export default function MembershipPage() {
       {/* Payment Modal */}
       {showPayment && selectedPlan && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={() => { if (!paying) setShowPayment(false) }}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             {!paid ? (
               <>
                 <div className="text-center mb-4">
-                  <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Crown size={28} className="text-amber-500" />
+                  <div className="w-14 h-14 bg-accent-light/40 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Crown size={28} className="text-accent" />
                   </div>
                   <h3 className="text-lg font-semibold">
                     {selectedPlan === 'lifetime' ? '终身会员' : '高级会员（月购）'}
@@ -258,7 +248,7 @@ export default function MembershipPage() {
                   <button
                     onClick={() => handleUpgrade(selectedPlan)}
                     disabled={paying}
-                    className="flex-1 py-2.5 bg-amber-500 text-white rounded-xl font-medium hover:bg-amber-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 bg-accent text-white rounded-xl font-medium hover:bg-accent-dark disabled:opacity-50 flex items-center justify-center gap-2 btn-press"
                   >
                     {paying ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
                     {paying ? '处理中...' : '确认支付'}

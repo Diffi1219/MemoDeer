@@ -74,7 +74,7 @@ export default function FileContextMenu({
       style={{
         left: offset.x || x,
         top: offset.y || y,
-        background: 'rgba(255, 255, 255, 0.85)',
+        background: 'var(--s-0)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
       }}
@@ -94,7 +94,7 @@ export default function FileContextMenu({
           }}
           className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[13px] transition-colors text-left ${
             item.danger
-              ? 'text-red-500 hover:bg-red-50'
+              ? 'text-danger hover:bg-danger-light/50'
               : 'text-surface-600 hover:bg-surface-100'
           }`}
         >

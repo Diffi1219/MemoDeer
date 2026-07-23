@@ -36,7 +36,7 @@ function getFileIcon(fileType: string | undefined, fileName: string) {
     return <FileText size={16} className="text-blue-500 flex-shrink-0" />
   }
   if (fileType === 'pdf') {
-    return <FileText size={16} className="text-red-500 flex-shrink-0" />
+    return <FileText size={16} className="text-danger flex-shrink-0" />
   }
   if (fileType === 'docx' || fileType === 'doc') {
     return <FileText size={16} className="text-indigo-500 flex-shrink-0" />
@@ -129,8 +129,8 @@ export default function FileTreeNode({
         <span className="mr-1.5 flex-shrink-0">
           {isFolder ? (
             isExpanded
-              ? <FolderOpen size={16} className="text-amber-500 flex-shrink-0" />
-              : <Folder size={16} className="text-amber-500 flex-shrink-0" />
+              ? <FolderOpen size={16} className="text-accent flex-shrink-0" />
+              : <Folder size={16} className="text-accent flex-shrink-0" />
           ) : isProcessing ? (
             <Loader2 size={14} className="animate-spin text-blue-400 flex-shrink-0" />
           ) : (
@@ -152,14 +152,14 @@ export default function FileTreeNode({
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 min-w-0 text-[13px] px-1 py-0 border border-primary-400 rounded outline-none bg-white"
+            className="flex-1 min-w-0 text-[13px] px-1 py-0 border border-primary-400 rounded outline-none bg-surface-0"
             autoFocus
           />
         ) : (
           <span className="flex-1 min-w-0 truncate">
             {node.name}
             {node.needs_revectorize === 1 && (
-              <span className="ml-1.5 text-[10px] text-amber-500 font-medium" title="待向量化：内容已修改但未重新向量化">
+              <span className="ml-1.5 text-[10px] text-warning font-medium" title="待向量化：内容已修改但未重新向量化">
                 ⚠待向量化
               </span>
             )}

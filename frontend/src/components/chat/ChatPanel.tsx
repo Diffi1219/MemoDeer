@@ -4,35 +4,10 @@ import ReactMarkdown from 'react-markdown'
 import { Send, Loader2, FileText, Plus } from 'lucide-react'
 import apiClient, { getApiUrl } from '../../api/client'
 import GenUI from '../common/GenUI'
+import { preprocessObsidian, CALLOUT_STYLES } from '../../utils/obsidian'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
-
-/** 预处理 Obsidian 语法 */
-function preprocessObsidian(text: string): string {
-  let result = text
-  result = result.replace(/%%[\s\S]*?%%/g, '')
-  result = result.replace(/==(.+?)==/g, '<mark>$1</mark>')
-  result = result.replace(/\[\[([^\]|]+?)\]\]/g, (_m: string, p1: string) => `[${p1}](#obsidian-${p1.replace(/\s+/g, '-')})`)
-  result = result.replace(/\[\[([^\]|]+?)\|([^\]]+?)\]\]/g, (_m: string, _p1: string, p2: string) => `[${p2}](#obsidian-wikilink)`)
-  return result
-}
-
-/** Callout 样式 */
-const CALLOUT_STYLES: Record<string, { bg: string; border: string; icon: string }> = {
-  note: { bg: 'bg-blue-50', border: 'border-blue-400', icon: '📝' },
-  tip: { bg: 'bg-green-50', border: 'border-green-400', icon: '💡' },
-  info: { bg: 'bg-cyan-50', border: 'border-cyan-400', icon: 'ℹ️' },
-  warning: { bg: 'bg-amber-50', border: 'border-amber-400', icon: '⚠️' },
-  danger: { bg: 'bg-red-50', border: 'border-red-400', icon: '🚫' },
-  important: { bg: 'bg-purple-50', border: 'border-purple-400', icon: '❗' },
-  success: { bg: 'bg-emerald-50', border: 'border-emerald-400', icon: '✅' },
-  question: { bg: 'bg-violet-50', border: 'border-violet-400', icon: '❓' },
-  example: { bg: 'bg-teal-50', border: 'border-teal-400', icon: '📋' },
-  quote: { bg: 'bg-slate-50', border: 'border-slate-400', icon: '💬' },
-  bug: { bg: 'bg-rose-50', border: 'border-rose-400', icon: '🐛' },
-  todo: { bg: 'bg-orange-50', border: 'border-orange-400', icon: '📌' },
-}
 
 // 将文本中的 [1][2] 引用标记转为可点击元素
 function processInlineCitations(
@@ -90,17 +65,17 @@ function HtmlBlock({ html }: { html: string }) {
   }, [])
 
   const wrappedHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6; padding: 16px; margin: 0; color: #334155; }
+    body { font-family: system-ui, -apple-system, sans-serif; font-size: 14px; line-height: 1.6; padding: 16px; margin: 0; color: var(--s-800, #334155); background: var(--s-0, #fff); }
     table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-    th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
-    th { background: #f1f5f9; font-weight: 600; }
-    details { margin: 8px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
-    summary { font-weight: 600; cursor: pointer; color: #1e293b; }
-    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 8px 0; background: #f8fafc; }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #eff6ff; color: #2563eb; margin: 2px; }
-    .highlight { background: #fef3c7; padding: 2px 6px; border-radius: 4px; }
+    th, td { border: 1px solid var(--s-200, #e2e8f0); padding: 8px 12px; text-align: left; }
+    th { background: var(--s-100, #f1f5f9); font-weight: 600; }
+    details { margin: 8px 0; border: 1px solid var(--s-200, #e2e8f0); border-radius: 8px; padding: 12px; }
+    summary { font-weight: 600; cursor: pointer; color: var(--s-700, #1e293b); }
+    .card { border: 1px solid var(--s-200, #e2e8f0); border-radius: 12px; padding: 16px; margin: 8px 0; background: var(--s-50, #f8fafc); }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: var(--p-100, #eff6ff); color: var(--p-600, #2563eb); margin: 2px; }
+    .highlight { background: var(--warning-light, #fef3c7); padding: 2px 6px; border-radius: 4px; }
     .step { display: flex; gap: 12px; margin: 8px 0; align-items: flex-start; }
-    .step-num { width: 28px; height: 28px; border-radius: 50%; background: #22c55e; color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--success, #22c55e); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
   </style></head><body>${html}<script>
     var h = document.body.scrollHeight;
     parent.postMessage({type:'resize',height:h},'*');
@@ -315,7 +290,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
   }
 
   return (
-    <div className={`flex flex-col ${embedded ? 'h-full' : 'h-full'} bg-white`}>
+    <div className={`flex flex-col ${embedded ? 'h-full' : 'h-full'} bg-surface-0`}>
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.length === 0 && !streaming && (
@@ -335,7 +310,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                 <>
                   {msg.source === 'open' && msg.content && msg.content.length > 5 && (
                     <div className="flex items-center gap-1 mb-2">
-                      <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
+                      <span className="text-xs px-2 py-0.5 bg-warning-100 text-warning-700 rounded-full font-medium">
                         通用知识回答
                       </span>
                       <span className="text-xs text-surface-400">非来自你的笔记，请注意核实</span>
@@ -428,7 +403,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                       },
                       // ── Obsidian: Highlight ──
                       mark({ children }) {
-                        return <mark className="bg-amber-200 text-amber-900 px-0.5 rounded">{children}</mark>
+                        return <mark className="bg-warning-200 text-warning-900 px-0.5 rounded">{children}</mark>
                       },
                     }}
                   >
@@ -453,12 +428,12 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                               navigate(`/document/${cit.document_id}/view?highlight=${cit.chunk_id}`)
                             }
                           }}
-                          className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full font-medium hover:bg-primary-200 cursor-pointer transition-colors"
+                          className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded-full font-medium hover:bg-primary-200 cursor-pointer transition-colors btn-press"
                         >
                           [{cit.index}] {cit.document_name}
                         </button>
                         {hoveredCitation === cit.index && (
-                          <div className="absolute bottom-full left-0 mb-2 w-72 p-3 bg-white rounded-xl shadow-lg border border-surface-200 text-xs z-30 pointer-events-none">
+                          <div className="absolute bottom-full left-0 mb-2 w-72 p-3 bg-surface-0 rounded-xl shadow-lg border border-surface-200 text-xs z-30 pointer-events-none animate-fade-in-up">
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-medium text-surface-700 truncate max-w-[180px]">{cit.document_name}</span>
                               <span className="text-primary-500 flex-shrink-0 ml-2">相关度 {(cit.score * 100).toFixed(0)}%</span>
@@ -477,7 +452,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
                 <div className="mt-2 pt-2 border-t border-surface-200/50">
                   <button
                     onClick={() => onSaveNote?.(msg.content)}
-                    className="text-xs px-3 py-1 bg-primary-50 text-primary-600 rounded-full font-medium hover:bg-primary-100 transition-colors flex items-center gap-1"
+                    className="text-xs px-3 py-1 bg-primary-50 text-primary-600 rounded-full font-medium hover:bg-primary-100 transition-colors flex items-center gap-1 btn-press"
                   >
                     <Plus size={12} />
                     添加到笔记
@@ -499,7 +474,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
       </div>
 
       {/* 输入区 */}
-      <div className="px-4 py-3 border-t border-surface-200 bg-white">
+      <div className="px-4 py-3 border-t border-surface-200 bg-surface-0">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -514,7 +489,7 @@ export default function ChatPanel({ notebookId, sessionId, onSaveNote, embedded 
           <button
             onClick={handleSend}
             disabled={!input.trim() || streaming}
-            className="p-3 text-white rounded-xl disabled:opacity-50 transition-colors flex-shrink-0 bg-primary-500 hover:bg-primary-600"
+            className="p-3 text-white rounded-xl disabled:opacity-50 transition-colors flex-shrink-0 bg-primary-500 hover:bg-primary-600 btn-press"
           >
             {streaming ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
           </button>

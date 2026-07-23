@@ -6,6 +6,7 @@ import { useUIStore } from '../store/uiStore'
 import { useAuthStore } from '../store/authStore'
 import { Plus, BookOpen, FileText, Brain, Menu, Loader2, Trash2, Search } from 'lucide-react'
 import GlobalSearchModal from '../components/common/GlobalSearchModal'
+import PageHeader from '../components/layout/PageHeader'
 
 interface Notebook {
   id: string
@@ -65,17 +66,19 @@ export default function HomePage() {
   return (
     <div className="h-full flex flex-col">
       {/* 顶部 */}
-      <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-surface-200">
-        <button onClick={toggleDrawer} className="p-2 hover:bg-surface-100 rounded-lg">
-          <Menu size={22} />
-        </button>
-        <div>
-          <h1 className="text-lg font-semibold text-surface-900">MemoDeer</h1>
-        </div>
-        <button onClick={openGlobalSearch} className="p-2 hover:bg-surface-100 rounded-lg">
-          <Search size={20} />
-        </button>
-      </header>
+      <PageHeader
+        title="MemoDeer"
+        leftActions={
+          <button onClick={toggleDrawer} className="p-2 hover:bg-surface-100 rounded-lg btn-press">
+            <Menu size={22} />
+          </button>
+        }
+        actions={
+          <button onClick={openGlobalSearch} className="p-2 hover:bg-surface-100 rounded-lg btn-press">
+            <Search size={20} />
+          </button>
+        }
+      />
 
       {/* 欢迎 */}
       <div className="px-4 pt-4 pb-2">
@@ -101,7 +104,7 @@ export default function HomePage() {
               <div
                 key={nb.id}
                 onClick={() => navigate(`/notebook/${nb.id}`)}
-                className="bg-white rounded-xl p-4 shadow-sm border border-surface-200 hover:border-primary-300 transition-colors cursor-pointer active:scale-[0.98]"
+                className="bg-surface-0 rounded-xl p-4 shadow-sm border border-surface-200 hover:border-primary-300 transition-colors cursor-pointer active:scale-[0.98] card-lift"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -125,7 +128,7 @@ export default function HomePage() {
                         deleteMutation.mutate(nb.id)
                       }
                     }}
-                    className="p-2 text-surface-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-surface-300 hover:text-danger hover:bg-danger-light/50 rounded-lg transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -157,7 +160,7 @@ export default function HomePage() {
                 { icon: '🧠', title: '知识点提取', desc: 'AI 自动提炼核心概念和关键定义（会员）' },
                 { icon: '🔍', title: '全局搜索', desc: '跨笔记本快速定位知识点和文档片段' },
               ].map((f) => (
-                <div key={f.title} className="bg-white rounded-xl p-3 border border-surface-200 shadow-sm hover:shadow-md transition-shadow">
+                <div key={f.title} className="bg-surface-0 rounded-xl p-3 border border-surface-200 shadow-sm hover:shadow-md transition-shadow card-lift">
                   <span className="text-2xl">{f.icon}</span>
                   <h3 className="text-sm font-semibold text-surface-700 mt-2 mb-0.5">{f.title}</h3>
                   <p className="text-xs text-surface-400 leading-relaxed">{f.desc}</p>
@@ -185,7 +188,7 @@ export default function HomePage() {
       {/* 创建笔记本弹窗 */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-4">新建笔记本</h3>
             <form onSubmit={handleCreate}>
               <input

@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { useUIStore } from '../../store/uiStore'
 import SideDrawer from './SideDrawer'
+import Toast from '../common/Toast'
 
 export default function Layout() {
   const isDrawerOpen = useUIStore((s) => s.isDrawerOpen)
@@ -20,6 +21,9 @@ export default function Layout() {
 
       {/* 侧拉栏 */}
       <SideDrawer />
+
+      {/* Toast 通知 */}
+      <Toast />
     </div>
   )
 }

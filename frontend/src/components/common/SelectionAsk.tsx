@@ -152,7 +152,7 @@ export default function SelectionAsk({ children, className, notebookId }: Props)
           onClick={() => !state.loading && handleClose()}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in-up max-h-[85vh] flex flex-col"
+            className="bg-surface-0 rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in-up max-h-[85vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -192,7 +192,7 @@ export default function SelectionAsk({ children, className, notebookId }: Props)
               <button
                 onClick={handleAsk}
                 disabled={!state.question.trim() || state.loading}
-                className="w-full mt-2 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full mt-2 py-2.5 bg-primary-500 text-white rounded-xl text-sm font-medium hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-2 btn-press"
               >
                 {state.loading ? (
                   <><Loader2 size={16} className="animate-spin" /> AI 思考中...</>
@@ -214,7 +214,7 @@ export default function SelectionAsk({ children, className, notebookId }: Props)
                   <button
                     onClick={handleDeepDiscuss}
                     disabled={deepDiscussing}
-                    className="w-full mt-3 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl text-sm font-medium hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+                    className="w-full mt-3 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl text-sm font-medium hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors btn-press"
                   >
                     {deepDiscussing ? (
                       <Loader2 size={16} className="animate-spin" />

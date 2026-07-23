@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, Loader2, Check, X as XIcon, ChevronLeft, ChevronRight, GraduationCap, ListChecks, Pencil, Shuffle, AlertTriangle } from 'lucide-react'
+import { Loader2, Check, X as XIcon, ChevronLeft, ChevronRight, GraduationCap, ListChecks, Pencil, Shuffle, AlertTriangle } from 'lucide-react'
 import apiClient from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import PremiumGate from '../components/common/PremiumGate'
+import PageHeader from '../components/layout/PageHeader'
 
 interface QuizQuestion {
   id: string
@@ -77,13 +78,8 @@ export default function QuizPage() {
 
   if (!isPremium) {
     return (
-      <div className="h-full bg-white overflow-y-auto">
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-surface-200">
-          <button onClick={() => navigate(`/notebook/${notebookId}`)} className="p-2 hover:bg-surface-100 rounded-lg">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="font-semibold text-lg">出题练习</h1>
-        </header>
+      <div className="h-full bg-surface-0 overflow-y-auto">
+        <PageHeader title="出题练习" onBack={() => navigate(`/notebook/${notebookId}`)} />
         <PremiumGate
           feature="AI 智能出题"
           icon={<GraduationCap size={30} className="text-white" />}
@@ -150,7 +146,7 @@ export default function QuizPage() {
 
   if (generating) {
     return (
-      <div className="h-full bg-white flex items-center justify-center">
+      <div className="h-full bg-surface-0 flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={36} className="animate-spin text-primary-500 mx-auto mb-3" />
           <p className="text-surface-400 text-sm">AI 正在生成题目...</p>
@@ -162,13 +158,8 @@ export default function QuizPage() {
   // 题目生成前的设置页面
   if (questions.length === 0 && !generating) {
     return (
-      <div className="h-full bg-white overflow-y-auto">
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-surface-200">
-          <button onClick={() => navigate(`/notebook/${notebookId}`)} className="p-2 hover:bg-surface-100 rounded-lg">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="font-semibold text-lg">出题练习</h1>
-        </header>
+      <div className="h-full bg-surface-0 overflow-y-auto">
+        <PageHeader title="出题练习" onBack={() => navigate(`/notebook/${notebookId}`)} />
         <div className="max-w-md mx-auto px-4 py-12">
           <div className="text-center mb-8">
             <GraduationCap size={48} className="text-primary-400 mx-auto mb-3" />
@@ -238,13 +229,8 @@ export default function QuizPage() {
     }, {})
 
     return (
-      <div className="h-full bg-white overflow-y-auto">
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-surface-200">
-          <button onClick={() => navigate(`/notebook/${notebookId}`)} className="p-2 hover:bg-surface-100 rounded-lg">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="font-semibold text-lg">练习结果</h1>
-        </header>
+      <div className="h-full bg-surface-0 overflow-y-auto">
+        <PageHeader title="练习结果" onBack={() => navigate(`/notebook/${notebookId}`)} />
         <div className="max-w-lg mx-auto px-4 py-8 pb-24">
           <div className="text-center mb-8">
             <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 ${
@@ -379,19 +365,17 @@ export default function QuizPage() {
   if (!currentQ) return null
 
   return (
-    <div className="h-full bg-white flex flex-col">
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-surface-200">
-        <button onClick={() => navigate(`/notebook/${notebookId}`)} className="p-2 hover:bg-surface-100 rounded-lg">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1">
-          <h1 className="font-semibold text-sm">出题练习</h1>
-          <p className="text-xs text-surface-400">第 {currentIndex + 1} / {totalQuestions} 题 · 已答 {answeredCount} 题</p>
-        </div>
-        <span className="text-xs font-medium text-primary-500">
-          {correctCount}/{answeredCount > 0 ? answeredCount : '—'}
-        </span>
-      </header>
+    <div className="h-full bg-surface-0 flex flex-col">
+      <PageHeader
+        title="出题练习"
+        subtitle={`第 ${currentIndex + 1} / ${totalQuestions} 题 · 已答 ${answeredCount} 题`}
+        onBack={() => navigate(`/notebook/${notebookId}`)}
+        actions={
+          <span className="text-xs font-medium text-primary-500">
+            {correctCount}/{answeredCount > 0 ? answeredCount : '—'}
+          </span>
+        }
+      />
 
       {/* Progress Bar */}
       <div className="h-1 bg-surface-100">
@@ -490,7 +474,7 @@ export default function QuizPage() {
       </div>
 
       {/* Navigation */}
-      <div className="px-4 py-3 border-t border-surface-200 bg-white">
+      <div className="px-4 py-3 border-t border-surface-200 bg-surface-0">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
             onClick={handlePrev}

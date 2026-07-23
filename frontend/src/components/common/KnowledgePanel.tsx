@@ -230,7 +230,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
       {showDocPicker && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
           onClick={() => setShowDocPicker(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-2xl w-full max-w-md mx-4 shadow-2xl max-h-[80vh] flex flex-col animate-fade-in-up" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
               <div className="flex items-center gap-2">
                 <FileText size={16} className="text-primary-500" />
@@ -322,7 +322,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                 className={`flex-1 py-2 text-white text-sm rounded-xl font-medium flex items-center justify-center gap-2 ${
                   tempSelectedDocIds.size === 0
                     ? 'bg-surface-300 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                    : 'bg-gradient-to-r from-accent to-accent-dark hover:from-accent-dark hover:to-accent-dark btn-press'
                 }`}
               >
                 <Sparkles size={14} />
@@ -398,18 +398,18 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
       <>
         <div className="h-full overflow-y-auto">
           <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-20 h-20 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
-              <Sparkles size={36} className="text-amber-500" />
+            <div className="w-20 h-20 bg-accent-light/40 rounded-2xl flex items-center justify-center mb-4">
+              <Sparkles size={36} className="text-accent" />
             </div>
             <h3 className="text-lg font-semibold text-surface-700 mb-1">AI 知识卡片</h3>
             <p className="text-sm text-surface-400 text-center mb-2 max-w-xs">
               基于笔记本中的文档，AI 自动生成知识卡片和记忆口诀
             </p>
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3">
-                <p className="text-sm text-red-600">{error}</p>
+              <div className="bg-danger-light border border-danger/30 rounded-xl px-4 py-3 mb-3">
+                <p className="text-sm text-danger">{error}</p>
                 {error.includes('会员') && (
-                  <button onClick={() => navigate('/membership')} className="mt-2 text-xs text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg">
+                  <button onClick={() => navigate('/membership')} className="mt-2 text-xs text-white bg-danger hover:bg-red-600 px-3 py-1.5 rounded-lg">
                     去续费
                   </button>
                 )}
@@ -429,7 +429,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                     setShowNotebookPicker(true)
                   }
                 }}
-                className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-200 flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-accent to-accent-dark text-white rounded-xl font-medium hover:from-accent-dark hover:to-accent-dark shadow-lg shadow-accent/20 flex items-center gap-2 btn-press"
               >
                 <Sparkles size={18} />
                 生成知识卡片
@@ -455,7 +455,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <Loader2 size={36} className="animate-spin text-amber-500 mx-auto mb-3" />
+          <Loader2 size={36} className="animate-spin text-accent mx-auto mb-3" />
           <p className="text-sm text-surface-500">AI 正在分析文档内容...</p>
           <p className="text-xs text-surface-400 mt-1">正在生成知识卡片和记忆口诀</p>
         </div>
@@ -484,7 +484,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
             <button
               onClick={openDocPicker}
               disabled={loading}
-              className="px-2.5 py-1.5 text-xs bg-amber-50 text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-100 flex items-center gap-1"
+              className="px-2.5 py-1.5 text-xs bg-accent-light/30 text-accent-dark border border-accent/20 rounded-lg hover:bg-accent-light/50 flex items-center gap-1 btn-press"
             >
               <Sparkles size={12} /> 重新生成
             </button>
@@ -526,7 +526,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
 
               if (isEditing) {
                 return (
-                  <div key={card.id} className="bg-white rounded-xl border-2 border-primary-400 p-4">
+                  <div key={card.id} className="bg-surface-0 rounded-xl border-2 border-primary-400 p-4">
                     <input
                       value={editForm.title}
                       onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
@@ -570,7 +570,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                     if (window.innerWidth < 640) setPreviewCard(card)
                     else toggleFlip(card.id)
                   }}
-                  className="bg-white rounded-xl border border-surface-200 p-4 cursor-pointer hover:border-primary-300 hover:shadow-sm transition duration-200 active:scale-[0.97] group relative"
+                  className="bg-surface-0 rounded-xl border border-surface-200 p-4 cursor-pointer hover:border-primary-300 hover:shadow-sm transition duration-200 active:scale-[0.97] group relative card-lift"
                 >
                   {/* 操作按钮 */}
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -581,7 +581,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                     ><Edit3 size={12} /></button>
                     <button
                       onClick={(e) => deleteCard(card.id, e)}
-                      className="p-1 hover:bg-red-50 rounded text-surface-400 hover:text-red-500"
+                      className="p-1 hover:bg-danger-light/50 rounded text-surface-400 hover:text-danger"
                       title="删除"
                     ><Trash2 size={12} /></button>
                   </div>
@@ -589,7 +589,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                   <h4 className="text-sm font-semibold text-surface-800 mb-1.5 pr-12">
                     {card.title}
                     {card.knowledge_point_id && wrongCounts[card.knowledge_point_id] > 0 && (
-                      <span className="ml-1.5 text-xs text-red-500 font-normal">
+                      <span className="ml-1.5 text-xs text-danger font-normal">
                         ({wrongCounts[card.knowledge_point_id]}次答错)
                       </span>
                     )}
@@ -645,9 +645,9 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
             </h4>
             <div className="space-y-3">
               {mnemonics.map(item => (
-                <div key={item.id} className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+                <div key={item.id} className="bg-surface-0 rounded-xl border border-surface-200 overflow-hidden card-lift">
                   <div className="px-4 py-3 border-b border-surface-100 flex items-center gap-2">
-                    <Lightbulb size={16} className="text-amber-400 flex-shrink-0" />
+                    <Lightbulb size={16} className="text-accent flex-shrink-0" />
                     <h4 className="text-sm font-semibold text-surface-700">{item.title}</h4>
                     {item.source_doc && <span className="text-xs text-surface-300 ml-auto">📎 {item.source_doc}</span>}
                   </div>
@@ -656,7 +656,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
                     {item.tip && (
                       <div className="mt-2 flex items-start gap-1.5">
                         <span className="text-xs text-amber-500">💡</span>
-                        <span className="text-xs text-amber-600">{item.tip}</span>
+                        <span className="text-xs text-accent-dark">{item.tip}</span>
                       </div>
                     )}
                   </div>
@@ -670,7 +670,7 @@ export default function KnowledgePanel({ notebookId: propNotebookId, onGoToSourc
       {/* Mobile preview modal */}
       {previewCard && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:hidden justify-center" onClick={() => setPreviewCard(null)}>
-          <div className="bg-white rounded-t-2xl w-full p-6 max-h-[70vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl w-full p-6 max-h-[70vh] overflow-y-auto animate-modal-sheet" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">{previewCard.title}</h3>
               <button onClick={() => setPreviewCard(null)} className="p-1"><XIcon size={20} /></button>

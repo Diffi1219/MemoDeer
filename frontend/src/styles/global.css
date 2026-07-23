@@ -2,46 +2,208 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── 主题色系 CSS 变量 ─── */
-:root, [data-theme="blue"] {
-  --p-50: #eff6ff; --p-100: #dbeafe; --p-200: #bfdbfe; --p-300: #93c5fd;
-  --p-400: #60a5fa; --p-500: #3b82f6; --p-600: #2563eb; --p-700: #1d4ed8;
-  --p-800: #1e40af; --p-900: #1e3a8a;
-}
-[data-theme="purple"] {
-  --p-50: #faf5ff; --p-100: #f3e8ff; --p-200: #e9d5ff; --p-300: #d8b4fe;
-  --p-400: #a855f7; --p-500: #8b5cf6; --p-600: #7c3aed; --p-700: #6d28d9;
-  --p-800: #5b21b6; --p-900: #4c1d95;
-}
-[data-theme="orange"] {
-  --p-50: #fff7ed; --p-100: #ffedd5; --p-200: #fed7aa; --p-300: #fdba74;
-  --p-400: #fb923c; --p-500: #f97316; --p-600: #ea580c; --p-700: #c2410c;
-  --p-800: #9a3412; --p-900: #7c2d12;
-}
-[data-theme="green"] {
-  --p-50: #f0fdf4; --p-100: #dcfce7; --p-200: #bbf7d0; --p-300: #86efac;
-  --p-400: #4ade80; --p-500: #22c55e; --p-600: #16a34a; --p-700: #15803d;
-  --p-800: #166534; --p-900: #14532d;
-}
-[data-theme="pink"] {
-  --p-50: #fdf2f8; --p-100: #fce7f3; --p-200: #fbcfe8; --p-300: #f9a8d4;
-  --p-400: #f472b6; --p-500: #ec4899; --p-600: #db2777; --p-700: #be185d;
-  --p-800: #9d174d; --p-900: #831843;
-}
+/* ══════════════════════════════════════════════════════════════
+   MemoDeer Design System — Global Tokens & Theme
+   "林间书房" — Claude-style warm paper + forest study
+   ══════════════════════════════════════════════════════════════ */
 
-/* 基础变量 */
-:root {
+/* ─── 基础变量（亮色模式默认） ─── */
+:root,
+[data-theme-mode="light"] {
+  /* 动画时长 */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-glacial: 600ms;
+
+  /* 缓动曲线 — Claude 风格：柔和、有弹性的物理感 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.76, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* 暖灰 Surface 色系 — 模拟纸张的温暖色调 */
+  --s-0: #FDFBF7;
+  --s-50: #FAF5EF;
+  --s-100: #F5EDE3;
+  --s-200: #E8DDCF;
+  --s-300: #CCC1B0;
+  --s-400: #A29684;
+  --s-500: #7D7362;
+  --s-600: #645B4C;
+  --s-700: #4D4539;
+  --s-800: #373128;
+  --s-900: #221D17;
+
+  /* 语义色 */
+  --accent: #C8873A;
+  --accent-light: #E8C48A;
+  --accent-dark: #8B5E2B;
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --info: #0ea5e9;
+  --info-light: #e0f2fe;
+
+  /* 阴影 — 柔和、多层 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+
+  /* Z-index 层级 */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-drawer: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* 布局 */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --header-height: 56px;
   --drawer-width: 280px;
 
-  /* 自定义 easing 曲线 — 比 CSS 内置值更有冲击力 */
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* 边框 */
+  --border-light: 1px solid var(--s-200);
+  --border-focus: 2px solid var(--p-400);
 }
 
-/* 全局 reset */
+/* ─── 暗色模式 ─── */
+[data-theme-mode="dark"] {
+  /* 深灰 Surface — 暗色模式 */
+  --s-0: #1E1E1E;
+  --s-50: #181818;
+  --s-100: #252525;
+  --s-200: #333333;
+  --s-300: #454545;
+  --s-400: #6B6B6B;
+  --s-500: #8C8C8C;
+  --s-600: #ADADAD;
+  --s-700: #C4C4C4;
+  --s-800: #DCDCDC;
+  --s-900: #EFEFEF;
+
+  /* 语义色暗色适配 */
+  --accent: #D4944A;
+  --accent-light: #3D2A14;
+  --accent-dark: #E8C48A;
+  --success: #34d399;
+  --success-light: #064e3b;
+  --warning: #fbbf24;
+  --warning-light: #451a03;
+  --danger: #f87171;
+  --danger-light: #450a0a;
+  --info: #38bdf8;
+  --info-light: #082f49;
+
+  /* 暗色阴影 — 更深、更不透明 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.16), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.20), 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.16);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.32), 0 4px 16px rgba(0, 0, 0, 0.20);
+  --shadow-glow: 0 0 24px rgba(96, 165, 250, 0.25);
+
+  --border-light: 1px solid var(--s-200);
+  --border-focus: 2px solid var(--p-400);
+}
+
+/* ─── 5 色主题（亮色 + 暗色） ─── */
+
+/* Blue — 晨湖蓝 */
+:root, [data-theme="blue"] {
+  --p-50: #eff6ff;  --p-100: #dceafe; --p-200: #bfd5fe;
+  --p-300: #93bbfd; --p-400: #609dfa; --p-500: #3b82f6;
+  --p-600: #2563eb; --p-700: #1d4ed8; --p-800: #1e40af;
+  --p-900: #1e3a8a;
+}
+[data-theme-mode="dark"][data-theme="blue"],
+[data-theme="blue"][data-theme-mode="dark"] {
+  --p-50: #0f1d3a;  --p-100: #132952; --p-200: #1a3a6d;
+  --p-300: #234d8a; --p-400: #2d60a8; --p-500: #3b82f6;
+  --p-600: #5a9cf8; --p-700: #7ab5fb; --p-800: #a3cfff;
+  --p-900: #cfe2ff;
+}
+
+/* Purple — 暮霭紫 */
+[data-theme="purple"] {
+  --p-50: #faf5ff;  --p-100: #f3e8ff; --p-200: #e9d5ff;
+  --p-300: #d8b4fe; --p-400: #a855f7; --p-500: #8b5cf6;
+  --p-600: #7c3aed; --p-700: #6d28d9; --p-800: #5b21b6;
+  --p-900: #4c1d95;
+}
+[data-theme-mode="dark"][data-theme="purple"],
+[data-theme="purple"][data-theme-mode="dark"] {
+  --p-50: #1a0f2e;  --p-100: #241544; --p-200: #311c5e;
+  --p-300: #3f247a; --p-400: #5b2eb0; --p-500: #8b5cf6;
+  --p-600: #9d7bf8; --p-700: #b49dfa; --p-800: #cebffd;
+  --p-900: #e9dffd;
+}
+
+/* Orange — 秋叶橙 */
+[data-theme="orange"] {
+  --p-50: #fff7ed;  --p-100: #ffedd5; --p-200: #fed7aa;
+  --p-300: #fdba74; --p-400: #fb923c; --p-500: #f97316;
+  --p-600: #ea580c; --p-700: #c2410c; --p-800: #9a3412;
+  --p-900: #7c2d12;
+}
+[data-theme-mode="dark"][data-theme="orange"],
+[data-theme="orange"][data-theme-mode="dark"] {
+  --p-50: #2d1708;  --p-100: #3f1f0a; --p-200: #57290e;
+  --p-300: #713412; --p-400: #a8471a; --p-500: #f97316;
+  --p-600: #fa8a3e; --p-700: #fca567; --p-800: #fdc293;
+  --p-900: #feded;
+}
+
+/* Green — 松针绿 */
+[data-theme="green"] {
+  --p-50: #f0fdf4;  --p-100: #dcfce7; --p-200: #bbf7d0;
+  --p-300: #86efac; --p-400: #4ade80; --p-500: #22c55e;
+  --p-600: #16a34a; --p-700: #15803d; --p-800: #166534;
+  --p-900: #14532d;
+}
+[data-theme-mode="dark"][data-theme="green"],
+[data-theme="green"][data-theme-mode="dark"] {
+  --p-50: #0a1f12;  --p-100: #0e2c19; --p-200: #143d23;
+  --p-300: #1b512e; --p-400: #23703c; --p-500: #22c55e;
+  --p-600: #44d478; --p-700: #6be295; --p-800: #9aefb8;
+  --p-900: #cafad8;
+}
+
+/* Pink — 野蔷薇粉 */
+[data-theme="pink"] {
+  --p-50: #fdf2f8;  --p-100: #fce7f3; --p-200: #fbcfe8;
+  --p-300: #f9a8d4; --p-400: #f472b6; --p-500: #ec4899;
+  --p-600: #db2777; --p-700: #be185d; --p-800: #9d174d;
+  --p-900: #831843;
+}
+[data-theme-mode="dark"][data-theme="pink"],
+[data-theme="pink"][data-theme-mode="dark"] {
+  --p-50: #2d0d1d;  --p-100: #3f1229; --p-200: #571a38;
+  --p-300: #712248; --p-400: #a8326a; --p-500: #ec4899;
+  --p-600: #f26eae; --p-700: #f797c6; --p-800: #fbc0dd;
+  --p-900: #fde0ef;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   全局 Reset & 纸质纹理背景
+   ══════════════════════════════════════════════════════════════ */
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -53,123 +215,381 @@ html, body, #root {
 }
 
 body {
+  --bg-paper: var(--s-50);
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-paper);
+  position: relative;
 }
 
-/* 滚动条美化 */
+/* 纸张纤维纹理 — 极细横纹，模拟纸张纤维走向 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(195, 175, 150, 0.018) 3px,
+    rgba(195, 175, 150, 0.018) 4px
+  );
+}
+
+/* SVG 噪点纹理 — 微随机噪点，模拟纸张质感 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* 暗色模式下纹理微调 */
+[data-theme-mode="dark"] body::before {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(90, 90, 90, 0.015) 3px,
+    rgba(90, 90, 90, 0.015) 4px
+  );
+}
+
+[data-theme-mode="dark"] body::after {
+  opacity: 0.018;
+}
+
+/* 低分辨率屏幕省略纹理渲染（性能优化） */
+@media (max-resolution: 1dppx) {
+  body::after { opacity: 0.012; }
+  [data-theme-mode="dark"] body::after { opacity: 0.008; }
+}
+
+/* ─── 确保所有内容在纹理上方 ─── */
+#root {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   滚动条美化
+   ══════════════════════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--s-300);
   border-radius: 2px;
 }
-
-/* ─── 通用按钮 press 反馈 ─── */
-@layer components {
-  .btn-press {
-    transition: transform 160ms var(--ease-out);
-  }
-  .btn-press:active {
-    transform: scale(0.97);
-  }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--s-400);
 }
 
-/* ─── 聊天气泡动画 ─── */
+/* ══════════════════════════════════════════════════════════════
+   动画 Keyframes
+   ══════════════════════════════════════════════════════════════ */
+
+/* 淡入 + 微上移 — 聊天气泡、列表项入场 */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in-up {
-  animation: fadeInUp 0.3s var(--ease-out);
+
+/* 页面入场 */
+@keyframes pageEnter {
+  from { opacity: 0; transform: scale(0.98) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ─── 打字光标 ─── */
+/* 页面出场 */
+@keyframes pageExit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+/* 打字光标闪烁 */
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
-.typing-cursor::after {
-  content: '▌';
-  animation: blink 1s infinite;
-}
 
-/* ─── 侧拉栏 ─── */
-.drawer-overlay {
-  @apply fixed inset-0 bg-black/40 z-40;
-  opacity: 0;
-  transition: opacity 300ms var(--ease-out);
-}
-.drawer-overlay.open {
-  opacity: 1;
-}
-
-/* ─── 弹窗通用：覆盖层淡入 + 面板滑入 ─── */
-.modal-overlay {
-  opacity: 0;
-  transition: opacity 200ms var(--ease-out);
-}
-.modal-overlay.open {
-  opacity: 1;
-}
-
-.modal-sheet {
-  animation: modalSlideUp 250ms var(--ease-out) forwards;
-}
+/* 弹窗 — 底部滑入 */
 @keyframes modalSlideUp {
   from { transform: translateY(16px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
-.modal-sheet-center {
-  animation: modalScaleIn 200ms var(--ease-out) forwards;
-}
+/* 弹窗 — 居中缩放 */
 @keyframes modalScaleIn {
-  from { transform: scale(0.95); opacity: 0; }
+  from { transform: scale(0.92); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
-/* ─── 底部面板 ─── */
-.bottom-sheet {
-  @apply fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 shadow-xl;
-  padding-bottom: var(--safe-bottom);
-  animation: slideUp 300ms var(--ease-out);
-}
+/* 底部面板 */
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
 
-/* ─── 卡片 stagger ─── */
-.stagger-item {
-  opacity: 0;
-  transform: translateY(8px);
-  animation: fadeInUp 300ms var(--ease-out) forwards;
+/* Toast 从右侧弹入 */
+@keyframes toastIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-/* ─── 无障碍：reduced motion ─── */
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .modal-sheet,
-  .modal-sheet-center,
-  .bottom-sheet,
+@keyframes toastOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(120%); opacity: 0; }
+}
+
+/* 弹簧弹入（用于重要确认反馈） */
+@keyframes popIn {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 鹿角加载动画 — 线条从左到右生长 */
+@keyframes antlerGrow {
+  0% { stroke-dashoffset: 100; opacity: 0.3; }
+  50% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.3; }
+}
+
+/* 思考指示器 — 三个点依次跳动 */
+@keyframes dotBounce {
+  0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   组件层工具类
+   ══════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* ── 按钮交互三态 ── */
+  .btn-press {
+    transition: transform 150ms var(--ease-out),
+                box-shadow 150ms var(--ease-out);
+  }
+  .btn-press:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+    transition: transform 100ms var(--ease-in-out);
+  }
+
+  /* ── 卡片悬浮 ── */
+  .card-lift {
+    transition: transform 200ms var(--ease-out),
+                box-shadow 200ms var(--ease-out);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .card-lift:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-xs);
+    transition: transform 100ms var(--ease-in-out);
+  }
+
+  /* ── 统一卡片 ── */
+  .card {
+    background-color: var(--s-0);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    border: var(--border-light);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ── 统一输入框 ── */
+  .input-primary {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-md);
+    border: var(--border-light);
+    background-color: var(--s-0);
+    color: var(--s-800);
+    outline: none;
+    transition: border-color 150ms var(--ease-out),
+                box-shadow 150ms var(--ease-out);
+  }
+  .input-primary::placeholder {
+    color: var(--s-400);
+  }
+  .input-primary:focus {
+    border-color: var(--p-400);
+    box-shadow: 0 0 0 3px var(--p-100);
+  }
+
+  /* ── 统一标签 ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    background-color: var(--s-100);
+    color: var(--s-600);
+  }
+
+  /* ── 聊天气泡动画 ── */
+  .animate-fade-in-up {
+    animation: fadeInUp 300ms var(--ease-out);
+  }
+
+  /* ── 打字光标 ── */
+  .typing-cursor::after {
+    content: '▌';
+    animation: blink 1s infinite;
+    color: var(--p-500);
+  }
+
+  /* ── 侧拉栏 ── */
+  .drawer-overlay {
+    @apply fixed inset-0 z-40;
+    background-color: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 300ms var(--ease-out);
+    pointer-events: none;
+  }
+  .drawer-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── 弹窗覆盖层 ── */
+  .modal-overlay {
+    opacity: 0;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .modal-overlay.open {
+    opacity: 1;
+  }
+
+  .modal-sheet {
+    animation: modalSlideUp 250ms var(--ease-out) forwards;
+  }
+
+  .modal-sheet-center {
+    animation: modalScaleIn 200ms var(--ease-spring) forwards;
+  }
+
+  /* ── 底部面板 ── */
+  .bottom-sheet {
+    @apply fixed bottom-0 left-0 right-0 z-50;
+    background-color: var(--s-0);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: var(--shadow-xl);
+    padding-bottom: var(--safe-bottom);
+    animation: slideUp 350ms var(--ease-spring);
+  }
+
+  /* ── 卡片 Stagger 入场 ── */
   .stagger-item {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeInUp 400ms var(--ease-out) forwards;
+  }
+
+  /* ── 页面转场 ── */
+  .page-enter {
+    animation: pageEnter 300ms var(--ease-out) forwards;
+  }
+  .page-exit {
+    animation: pageExit 150ms var(--ease-in-out) forwards;
+  }
+
+  /* ── 思考指示器点 ── */
+  .thinking-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--s-400);
+    animation: dotBounce 1.4s infinite ease-in-out both;
+  }
+  .thinking-dot:nth-child(1) { animation-delay: 0ms; }
+  .thinking-dot:nth-child(2) { animation-delay: 160ms; }
+  .thinking-dot:nth-child(3) { animation-delay: 320ms; }
+
+  /* ── 弹簧弹入 ── */
+  .animate-pop-in {
+    animation: popIn 400ms var(--ease-spring) forwards;
+  }
+
+  /* ── Toast 独立动画类（供 Tailwind 配置使用） ── */
+  .animate-toast-in {
+    animation: toastIn 400ms var(--ease-spring) forwards;
+  }
+  .animate-toast-out {
+    animation: toastOut 200ms var(--ease-in-out) forwards;
+  }
+
+  /* ── Modal 独立动画类 ── */
+  .animate-modal-sheet-center {
+    animation: modalScaleIn 200ms var(--ease-spring) forwards;
+  }
+  .animate-modal-sheet {
+    animation: modalSlideUp 250ms var(--ease-out) forwards;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   无障碍：Reduced Motion
+   ══════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 
-/* ─── 触屏安全：hover 仅对指针设备生效 ─── */
+/* ══════════════════════════════════════════════════════════════
+   触屏安全：Hover 仅对指针设备生效
+   ══════════════════════════════════════════════════════════════ */
+
 @media (hover: hover) and (pointer: fine) {
   .hover-lift:hover {
     transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
   }
   .hover-glow:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
   }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   KaTeX 暗色模式适配
+   ══════════════════════════════════════════════════════════════ */
+
+[data-theme-mode="dark"] .katex {
+  color: var(--s-800);
+}
+
+[data-theme-mode="dark"] .katex .mord,
+[data-theme-mode="dark"] .katex .mathnormal {
+  color: var(--s-800);
 }

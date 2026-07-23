@@ -74,9 +74,9 @@ export default function MnemonicsList({ notebookId }: Props) {
         <>
           <div className="space-y-3">
             {mnemonics.map(item => (
-              <div key={item.id} className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+              <div key={item.id} className="bg-surface-0 rounded-xl border border-surface-200 overflow-hidden card-lift">
                 <div className="px-4 py-3 border-b border-surface-100 flex items-center gap-2">
-                  <Lightbulb size={16} className="text-amber-400 flex-shrink-0" />
+                  <Lightbulb size={16} className="text-accent flex-shrink-0" />
                   <h4 className="text-sm font-semibold text-surface-700">{item.title}</h4>
                   {item.source_doc && (
                     <span className="text-xs text-surface-300 ml-auto">📎 {item.source_doc}</span>
@@ -88,8 +88,8 @@ export default function MnemonicsList({ notebookId }: Props) {
                   </p>
                   {item.tip && (
                     <div className="mt-2 flex items-start gap-1.5">
-                      <span className="text-xs text-amber-500 flex-shrink-0">💡</span>
-                      <span className="text-xs text-amber-600">{item.tip}</span>
+                      <span className="text-xs text-accent flex-shrink-0">💡</span>
+                      <span className="text-xs text-accent-dark flex-shrink-0">{item.tip}</span>
                     </div>
                   )}
                 </div>
@@ -105,7 +105,7 @@ export default function MnemonicsList({ notebookId }: Props) {
                 .catch(() => {})
                 .finally(() => setLoading(false))
             }}
-            className="w-full mt-4 py-2.5 border border-dashed border-surface-300 rounded-xl text-sm text-surface-400 hover:border-primary-300 hover:text-primary-500 transition-colors flex items-center justify-center gap-2"
+            className="w-full mt-4 py-2.5 border border-dashed border-surface-300 rounded-xl text-sm text-surface-400 hover:border-primary-300 hover:text-primary-500 transition-colors flex items-center justify-center gap-2 btn-press"
           >
             <Sparkles size={14} />
             AI 生成更多口诀

@@ -18,6 +18,7 @@ import PendingVectorizeBar from '../components/common/PendingVectorizeBar'
 import KnowledgePanel from '../components/common/KnowledgePanel'
 import PremiumGate from '../components/common/PremiumGate'
 import ObsidianMarkdown from '../components/common/ObsidianMarkdown'
+import PageHeader from '../components/layout/PageHeader'
 
 interface PendingItem {
   document_id: string
@@ -370,7 +371,7 @@ export default function NotebookPage() {
   if (error) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3">
-        <p className="text-red-500 text-sm">{error}</p>
+        <p className="text-danger text-sm">{error}</p>
         <button onClick={() => navigate('/')} className="text-primary-500 text-sm">返回首页</button>
       </div>
     )
@@ -379,40 +380,39 @@ export default function NotebookPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <header className="flex-shrink-0 bg-white border-b border-surface-200">
-        <div className="flex items-center gap-2 px-3 py-2">
-          <button onClick={() => navigate('/')} className="p-1.5 hover:bg-surface-100 rounded-lg">
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="font-semibold text-sm truncate flex-1">{notebook?.title || '笔记本'}</h1>
-
-          {/* 知识卡片搜索（仅会员）*/}
-          {isPremium && (
-            <div className="flex items-center gap-0">
-              <div className="relative">
-                <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-300" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="模糊检索..."
-                  className="w-28 sm:w-40 pl-6 pr-2 py-1 text-xs bg-surface-50 rounded-lg border border-surface-200 focus:border-primary-500 outline-none mr-1"
-                />
-              </div>
-              <button
-                onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
-                className="px-2.5 py-1 bg-primary-500 text-white text-xs rounded-lg hover:bg-primary-600 disabled:opacity-50 whitespace-nowrap"
-              >
-                {searching ? <Loader2 size={12} className="animate-spin" /> : '检索'}
+      <header className="flex-shrink-0 bg-surface-0 border-b border-surface-200">
+        <PageHeader
+          title={notebook?.title || '笔记本'}
+          onBack={() => navigate('/')}
+          actions={
+            <>
+              {isPremium && (
+                <div className="flex items-center gap-0">
+                  <div className="relative">
+                    <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-surface-300" />
+                    <input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                      placeholder="模糊检索..."
+                      className="w-28 sm:w-40 pl-6 pr-2 py-1 text-xs bg-surface-50 rounded-lg border border-surface-200 focus:border-primary-500 outline-none mr-1"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSearch}
+                    disabled={searching || !searchQuery.trim()}
+                    className="px-2.5 py-1 bg-primary-500 text-white text-xs rounded-lg hover:bg-primary-600 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {searching ? <Loader2 size={12} className="animate-spin" /> : '检索'}
+                  </button>
+                </div>
+              )}
+              <button onClick={toggleDrawer} className="p-1.5 hover:bg-surface-100 rounded-lg btn-press">
+                <Menu size={18} />
               </button>
-            </div>
-          )}
-
-          <button onClick={toggleDrawer} className="p-1.5 hover:bg-surface-100 rounded-lg">
-            <Menu size={18} />
-          </button>
-        </div>
+            </>
+          }
+        />
 
         {/* Tab Bar */}
         <div className="flex border-t border-surface-100 px-2">
@@ -433,7 +433,7 @@ export default function NotebookPage() {
               <tab.icon size={13} />
               {tab.label}
               {tab.premium && (
-                <Crown size={9} className={isPremium ? 'text-amber-500' : 'text-surface-300'} />
+                <Crown size={9} className={isPremium ? 'text-accent' : 'text-surface-300'} />
               )}
               {activeTab === tab.key && (
                 <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary-500 rounded-full" />
@@ -449,7 +449,7 @@ export default function NotebookPage() {
         {isFileTab && (
           <>
             <div
-              className={`flex-shrink-0 border-r border-surface-200 bg-white/60 overflow-hidden transition-[width] duration-300 ease-out ${
+              className={`flex-shrink-0 border-r border-surface-200 bg-surface-0/60 overflow-hidden transition-[width] duration-300 ease-out ${
                 sidebarCollapsed ? 'w-0 border-r-0' : 'w-[240px] sm:w-[260px]'
               }`}
             >
@@ -481,7 +481,7 @@ export default function NotebookPage() {
             >
               <button
                 onClick={toggleSidebar}
-                className="w-5 h-10 bg-white border border-surface-200 rounded-r-lg flex items-center justify-center cursor-pointer hover:bg-surface-50 transition-colors shadow-sm"
+                className="w-5 h-10 bg-surface-0 border border-surface-200 rounded-r-lg flex items-center justify-center cursor-pointer hover:bg-surface-50 transition-colors shadow-sm"
                 title={sidebarCollapsed ? '展开文件树' : '收起文件树'}
               >
                 {sidebarCollapsed ? (
@@ -514,7 +514,7 @@ export default function NotebookPage() {
                   {searchResults.map((r: any, i: number) => (
                     <div
                       key={i}
-                      className="bg-white rounded-lg p-2 border border-surface-200 text-xs cursor-pointer hover:border-primary-300"
+                      className="bg-surface-0 rounded-lg p-2 border border-surface-200 text-xs cursor-pointer hover:border-primary-300"
                       onClick={() => {
                         if (r.chunk_id?.startsWith('kp_')) {
                           // 知识点结果 → 切换到知识卡片 tab
@@ -637,7 +637,7 @@ export default function NotebookPage() {
       {/* Upload Modal */}
       {uploadOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setUploadOpen(false)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">上传文档</h3>
               <button onClick={() => setUploadOpen(false)} className="p-1"><X size={20} /></button>
@@ -675,7 +675,7 @@ export default function NotebookPage() {
       {askModal.show && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
           onClick={() => !askModal.loading && setAskModal(prev => ({ ...prev, show: false }))}>
-          <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in-up max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-2xl w-full max-w-md mx-4 shadow-2xl animate-fade-in-up max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200">
               <div className="flex items-center gap-2 text-sm font-semibold text-surface-700">
                 <MessageCircle size={16} className="text-primary-500" /> AI 助手
@@ -733,7 +733,7 @@ export default function NotebookPage() {
       {/* Create File/Folder Modal */}
       {createModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={() => setCreateModal(null)}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-6 animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-4">
               {createModal.type === 'file' ? '新建 Markdown 文件' : '新建文件夹'}
             </h3>
@@ -768,14 +768,14 @@ export default function NotebookPage() {
       {/* 删除确认弹窗 — 替代原生 confirm（预览浏览器中 confirm 被屏蔽） */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2">确定删除？</h3>
             <p className="text-sm text-surface-500 mb-6">
               "{deleteTarget.node.name}" 将被永久删除，所有相关数据和向量也会被清除，无法恢复。
             </p>
             <div className="flex gap-2">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 border border-surface-200 rounded-xl text-surface-600 font-medium hover:bg-surface-50">取消</button>
-              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600">删除</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 bg-danger text-white rounded-xl font-medium hover:bg-red-600">删除</button>
             </div>
           </div>
         </div>
@@ -1121,7 +1121,7 @@ function QuizTabContent({ notebookId, navigate }: { notebookId: string; navigate
       {/* 删除确认弹窗 */}
       {deleteConfirmTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={() => setDeleteConfirmTarget(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-surface-0 rounded-2xl w-full max-w-sm mx-4 p-6 shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-2">删除错题？</h3>
             <p className="text-sm text-surface-500 mb-6">
               该错题记录将被删除，无法恢复。

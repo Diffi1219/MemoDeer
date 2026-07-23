@@ -72,7 +72,7 @@ export default function GlobalSearchModal() {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start sm:items-center justify-center pt-20 sm:pt-0" onClick={handleClose}>
       <div
-        className="bg-white rounded-2xl w-full sm:max-w-lg mx-4 max-h-[80vh] flex flex-col shadow-xl animate-fade-in-up"
+        className="bg-surface-0 rounded-2xl w-full sm:max-w-lg mx-4 max-h-[80vh] flex flex-col shadow-xl animate-fade-in-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 搜索输入区 */}
@@ -138,7 +138,7 @@ export default function GlobalSearchModal() {
                 const isExpanded = expanded.has(nb.notebook_id)
                 const bestScore = nb.chunks.length > 0 ? nb.chunks[0].score : 0
                 return (
-                  <div key={nb.notebook_id} className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+                  <div key={nb.notebook_id} className="bg-surface-0 rounded-xl border border-surface-200 overflow-hidden card-lift">
                     {/* 笔记本卡片 */}
                     <button
                       onClick={() => toggleNotebook(nb.notebook_id)}

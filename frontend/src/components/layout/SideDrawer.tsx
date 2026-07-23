@@ -3,8 +3,29 @@ import { useUIStore } from '../../store/uiStore'
 import { useAuthStore } from '../../store/authStore'
 import {
   BookOpen, Search, Settings, LogOut, X, MessageSquare,
-  ChevronRight, Info, User,
+  ChevronRight, Info, User, Sparkles,
 } from 'lucide-react'
+
+/** 鹿角几何 SVG — 极简分叉线条，品牌 Signature 元素 */
+function AntlerMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M12 16V6" />
+      <path d="M12 6L4 1" />
+      <path d="M12 6L20 1" />
+      <path d="M4 1L2 4" />
+      <path d="M20 1L22 4" />
+    </svg>
+  )
+}
 
 export default function SideDrawer() {
   const isOpen = useUIStore((s) => s.isDrawerOpen)
@@ -26,48 +47,92 @@ export default function SideDrawer() {
     { icon: Settings, label: '设置', onClick: () => { navigate('/settings'); closeDrawer() } },
   ]
 
+  const initials = (user?.display_name || user?.username || '?')[0].toUpperCase()
+
   return (
     <div
-      className={`fixed top-0 left-0 h-full w-[280px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
+      className={`fixed top-0 left-0 h-full w-[280px] shadow-xl z-50 transform transition-transform duration-slow ease-out ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
+      style={{ backgroundColor: 'var(--s-0)' }}
     >
-      {/* 头部 */}
-      <div className="flex items-center justify-between p-4 border-b border-surface-200">
-        <div>
-          <h2 className="font-semibold text-lg text-primary-700">MemoDeer</h2>
-          <p className="text-xs text-surface-300 truncate max-w-[200px]">
-            {user?.display_name || user?.username || '未登录'}
-          </p>
+      {/* 头部 — 品牌区 */}
+      <div
+        className="flex items-center justify-between p-4 border-b"
+        style={{ borderColor: 'var(--s-200)' }}
+      >
+        <div className="flex items-center gap-2.5">
+          {/* 头像 — 柔和渐变背景 */}
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm"
+            style={{
+              background: 'linear-gradient(135deg, var(--p-400), var(--p-600))',
+              color: '#fff',
+            }}
+          >
+            {initials}
+          </div>
+          <div>
+            <h2 className="font-display text-lg font-normal" style={{ color: 'var(--s-800)' }}>
+              MemoDeer
+            </h2>
+            <p className="text-xs text-surface-400 truncate max-w-[190px]">
+              {user?.display_name || user?.username || '未登录'}
+            </p>
+          </div>
         </div>
-        <button onClick={closeDrawer} className="p-2 hover:bg-surface-100 rounded-lg">
-          <X size={20} />
+        <button
+          onClick={closeDrawer}
+          className="p-2 hover:bg-surface-100 rounded-lg btn-press"
+          style={{ '--tw-ring-color': 'var(--s-200)' } as React.CSSProperties}
+        >
+          <X size={18} className="text-surface-400" />
         </button>
       </div>
 
-      {/* 菜单 */}
+      {/* 菜单区 */}
       <nav className="p-2">
         {menuItems.map((item, i) => (
           <button
             key={i}
             onClick={item.onClick}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-100 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-100 transition-colors text-left group stagger-item"
+            style={{ animationDelay: `${i * 30}ms` }}
           >
-            <item.icon size={20} className="text-surface-500" />
-            <span className="text-sm font-medium">{item.label}</span>
-            <ChevronRight size={16} className="text-surface-300 ml-auto" />
+            <item.icon size={20} className="text-surface-400 group-hover:text-primary-500 transition-colors" />
+            <span className="text-sm font-medium text-surface-700">{item.label}</span>
+            <ChevronRight size={16} className="text-surface-300 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         ))}
       </nav>
 
-      {/* 底部登出 */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-surface-200">
+      {/* 底部区 */}
+      <div
+        className="absolute bottom-0 left-0 right-0 p-4 border-t"
+        style={{ borderColor: 'var(--s-200)' }}
+      >
+        {/* 品牌鹿角标识 */}
+        <div className="flex items-center justify-center gap-1.5 mb-3 opacity-40">
+          <AntlerMark className="w-4 h-3 text-surface-400" />
+          <span className="text-[10px] text-surface-400 font-medium">MemoDeer</span>
+        </div>
+
+        {/* 登出按钮 */}
         <button
           onClick={() => { logout(); closeDrawer(); navigate('/login') }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-danger-light text-surface-500 hover:text-danger transition-colors"
         >
-          <LogOut size={20} />
+          <LogOut size={18} />
           <span className="text-sm font-medium">退出登录</span>
+        </button>
+
+        {/* 注册页面不可见的会员入口 */}
+        <button
+          onClick={() => { navigate('/membership'); closeDrawer() }}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-100 text-surface-400 hover:text-accent transition-colors mt-1"
+        >
+          <Sparkles size={18} />
+          <span className="text-xs">升级会员</span>
         </button>
       </div>
     </div>
