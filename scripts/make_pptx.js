@@ -685,7 +685,8 @@ async function main() {
   // Fix phantom slideMaster entries that cause PowerPoint repair warnings
   console.log('Fixing OOXML phantom entries...');
   const { execSync } = require('child_process');
-  execSync(`python scripts/fix_pptx.py "${outPath}"`, { stdio: 'inherit' });
+  const { resolve } = require('path');
+  execSync(`python "${resolve(__dirname, 'fix_pptx.py')}" "${resolve(outPath)}"`, { stdio: 'inherit' });
   console.log('Done!');
 }
 
