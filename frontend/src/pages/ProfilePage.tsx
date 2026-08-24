@@ -18,18 +18,19 @@ export default function ProfilePage() {
   // 加载统计
   useEffect(() => {
     apiClient.get('/auth/user/stats').then(r => setStats(r.data)).catch(() => {})
-    // 打卡逻辑 — 使用本地时间避免时区问题
+    // 打卡逻辑 — 使用本地时间避免时区问题，按用户隔离
+    const uid = user?.id || 'guest'
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    const lastCheckin = localStorage.getItem('last_checkin_date')
-    const days = parseInt(localStorage.getItem('checkin_days') || '0')
+    const lastCheckin = localStorage.getItem(`last_checkin_date_${uid}`)
+    const days = parseInt(localStorage.getItem(`checkin_days_${uid}`) || '0')
     if (lastCheckin !== today) {
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
       const newDays = lastCheckin === yesterdayStr ? days + 1 : 1
-      localStorage.setItem('checkin_days', String(newDays))
-      localStorage.setItem('last_checkin_date', today)
+      localStorage.setItem(`checkin_days_${uid}`, String(newDays))
+      localStorage.setItem(`last_checkin_date_${uid}`, today)
       setCheckinDays(newDays)
     } else {
       setCheckinDays(days)
