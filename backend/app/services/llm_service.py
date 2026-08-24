@@ -45,7 +45,7 @@ class BaseLLMProvider(ABC):
 class OpenAICompatibleProvider(BaseLLMProvider):
     """OpenAI API 兼容的 Provider — 同时支持 DeepSeek 和本地 Ollama"""
 
-    def __init__(self, model: str, base_url: str, api_key: str, timeout: float = 60.0):
+    def __init__(self, model: str, base_url: str, api_key: str, timeout: float = 180.0):
         self.model = model
         self.client = AsyncOpenAI(
             api_key=api_key,

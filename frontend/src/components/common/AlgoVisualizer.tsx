@@ -14,7 +14,7 @@ export interface AlgoVizStep {
 export interface AlgoVizData {
   algorithm: string
   array: number[]
-  steps: AlgoVizStep[]
+  steps?: AlgoVizStep[]  // 可选：冒泡/选择排序由前端生成，无需提供
 }
 
 // 算法名中文映射
@@ -35,6 +35,72 @@ const ALGO_NAMES: Record<string, string> = {
 }
 
 // ── 工具函数 ──
+
+/**
+ * 确定性生成排序步骤 — 真实执行排序算法，记录每一步，保证完整且正确。
+ * 冒泡/选择排序的 swap 语义与前端 applySteps 完全匹配，故由代码生成而非 LLM 编写，
+ * 彻底避免 LLM 追踪数组索引出错（索引错误、步数过少、交换结果与描述不符等）。
+ * 返回 null 表示该算法无内置生成器，回退到 LLM 提供的 steps。
+ */
+function generateAlgoSteps(algorithm: string, initialArray: number[]): AlgoVizStep[] | null {
+  switch (algorithm) {
+    case 'bubble-sort':
+      return genBubbleSort(initialArray)
+    case 'selection-sort':
+      return genSelectionSort(initialArray)
+    default:
+      return null
+  }
+}
+
+/** 冒泡排序：n-1 趟，每趟从前往后两两比较，把较大者「冒泡」到末尾 */
+function genBubbleSort(arr0: number[]): AlgoVizStep[] {
+  const a = [...arr0]
+  const n = a.length
+  const steps: AlgoVizStep[] = []
+  for (let pass = 0; pass < n - 1; pass++) {
+    for (let j = 0; j < n - 1 - pass; j++) {
+      const [x, y] = [a[j], a[j + 1]]
+      if (x > y) {
+        ;[a[j], a[j + 1]] = [y, x]
+        steps.push({ type: 'compare', i: j, j: j + 1, desc: `第${pass + 1}趟：比较 arr[${j}]=${x} 和 arr[${j + 1}]=${y}，${x} > ${y} 需要交换` })
+        steps.push({ type: 'swap', i: j, j: j + 1, desc: `交换 arr[${j}] 与 arr[${j + 1}] → [${a.join(', ')}]` })
+      } else {
+        steps.push({ type: 'compare', i: j, j: j + 1, desc: `第${pass + 1}趟：比较 arr[${j}]=${x} 和 arr[${j + 1}]=${y}，${x} ≤ ${y} 不交换` })
+      }
+    }
+    steps.push({ type: 'sorted', i: n - 1 - pass, desc: `第${pass + 1}趟结束，arr[${n - 1 - pass}]=${a[n - 1 - pass]} 已就位` })
+  }
+  steps.push({ type: 'sorted', i: 0, desc: `arr[0]=${a[0]} 已就位` })
+  steps.push({ type: 'done', desc: '排序完成 ✓' })
+  return steps
+}
+
+/** 选择排序：每趟在未排序区间找到最小值，交换到区间开头 */
+function genSelectionSort(arr0: number[]): AlgoVizStep[] {
+  const a = [...arr0]
+  const n = a.length
+  const steps: AlgoVizStep[] = []
+  for (let i = 0; i < n - 1; i++) {
+    let minIdx = i
+    steps.push({ type: 'pivot', i, desc: `第${i + 1}趟：假设 arr[${i}]=${a[i]} 为当前最小值` })
+    for (let j = i + 1; j < n; j++) {
+      const isSmaller = a[j] < a[minIdx]
+      steps.push({ type: 'compare', i: minIdx, j, desc: `比较 arr[${minIdx}]=${a[minIdx]} 和 arr[${j}]=${a[j]}，${isSmaller ? `${a[j]} 更小，更新最小值` : '保持当前最小值'}` })
+      if (isSmaller) minIdx = j
+    }
+    if (minIdx !== i) {
+      const tmp = a[i]
+      a[i] = a[minIdx]
+      a[minIdx] = tmp
+      steps.push({ type: 'swap', i, j: minIdx, desc: `将最小值 ${a[i]} 与 arr[${i}] 交换 → [${a.join(', ')}]` })
+    }
+    steps.push({ type: 'sorted', i, desc: `arr[${i}]=${a[i]} 已就位` })
+  }
+  steps.push({ type: 'sorted', i: n - 1, desc: `arr[${n - 1}]=${a[n - 1]} 已就位` })
+  steps.push({ type: 'done', desc: '排序完成 ✓' })
+  return steps
+}
 
 /** 应用所有 step 到初始数组，得到当前 step 后的数组状态 */
 function applySteps(steps: AlgoVizStep[], initialArray: number[], upToIndex: number): number[] {
@@ -86,8 +152,14 @@ function getBarTransitionClass(stepType: string, barIndex: number, i?: number, j
 // ── 主组件 ──
 
 export default function AlgoVisualizer({ data }: { data: AlgoVizData }) {
-  const { algorithm, array: initialArray, steps } = data
+  const { algorithm, array: initialArray } = data
   const algoName = ALGO_NAMES[algorithm] || algorithm
+
+  // 内置生成器优先：确定性、完整、正确。仅当无内置实现时才用 LLM 提供的 steps
+  const steps = useMemo(
+    () => (generateAlgoSteps(algorithm, initialArray) ?? data.steps ?? []),
+    [algorithm, initialArray, data.steps],
+  )
 
   // ── 状态 ──
   const [currentStep, setCurrentStep] = useState(-1)  // -1 = 初始状态

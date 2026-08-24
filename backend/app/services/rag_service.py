@@ -371,10 +371,8 @@ def build_qa_prompt(question: str, context_chunks: List[dict]) -> List[dict]:
     system_prompt = """你是一个 AI 学习助手 MemoDeer。请优先基于提供的上下文回答用户的问题，当上下文不足时结合你的通用知识给出完整回答。
 
 ⚠️═══════════════════════════════════════════════════════════⚠️
-【最高优先级 · 必须先读】算法可视化强制规则：
-当用户的提问涉及任何算法（排序、搜索、图算法、动态规划、树、字符串算法等），
-你必须在回答末尾输出 ```algo-viz 交互式可视化 JSON 数据块。
-无论你前面写了什么文字解释、代码示例或 HTML 卡片，最后必须包含 algo-viz。
+【算法可视化】当用户想了解某个具体算法的运行流程/执行过程/演示/动画/可视化（例如问「冒泡排序的代码和流程」）时，
+在回答末尾附上一个 ```algo-viz 代码块。仅列举算法、只解释概念、只对比优劣时不要输出。
 ⚠️═══════════════════════════════════════════════════════════⚠️
 """ + ALGO_VIS_PROMPT + """
 
@@ -440,8 +438,8 @@ async def stream_answer(
     # 收集完整回答
     full_answer = ""
 
-    # 流式调用 DeepSeek V4-Pro
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
+    # 流式调用 DeepSeek V4（问答模型见 .env LLM_PRO_MODEL）
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=8192):
         full_answer += token
         yield _sse_token(token)
 
@@ -477,10 +475,8 @@ async def stream_answer_open(
         "解答学科疑问、提供学习方法建议、进行逻辑推理分析、帮助理解复杂概念。"
         "如果问题超出你的知识范围，诚实地告知用户。\n\n"
         "⚠️═══════════════════════════════════════════════════════════⚠️\n"
-        "【最高优先级 · 必须先读】算法可视化强制规则：\n"
-        "当用户的提问涉及任何算法（排序、搜索、图算法、动态规划、树、字符串算法等），\n"
-        "你必须在回答末尾输出 ```algo-viz 交互式可视化 JSON 数据块。\n"
-        "无论你前面写了什么文字解释、代码示例或 HTML 卡片，最后必须包含 algo-viz。\n"
+        "【算法可视化】当用户想了解某个具体算法的运行流程/执行过程/演示/动画/可视化（例如问「冒泡排序的代码和流程」）时，\n"
+        "在回答末尾附上一个 ```algo-viz 代码块。仅列举算法、只解释概念、只对比优劣时不要输出。\n"
         "⚠️═══════════════════════════════════════════════════════════⚠️"
     ) + ALGO_VIS_PROMPT + "\n\n" + (
         "【重要】你可以使用交互式 HTML 来呈现复杂的知识点。当需要展示图表、"
@@ -505,7 +501,7 @@ async def stream_answer_open(
 
     # 用 Pro 模型流式生成
     full_answer = ""
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=8192):
         full_answer += token
         yield _sse_token(token)
 
@@ -659,10 +655,8 @@ async def stream_answer_fallback(
         "请在回答开头加上一句声明（如'📌 以下回答来自通用知识，非你的个人笔记，请注意核实'），"
         "然后直接回答用户的问题，用清晰易懂的中文，适合学生理解。\n\n"
         "⚠️═══════════════════════════════════════════════════════════⚠️\n"
-        "【最高优先级 · 必须先读】算法可视化强制规则：\n"
-        "当用户的提问涉及任何算法（排序、搜索、图算法、动态规划、树、字符串算法等），\n"
-        "你必须在回答末尾输出 ```algo-viz 交互式可视化 JSON 数据块。\n"
-        "无论你前面写了什么文字解释、代码示例或 HTML 卡片，最后必须包含 algo-viz。\n"
+        "【算法可视化】当用户想了解某个具体算法的运行流程/执行过程/演示/动画/可视化（例如问「冒泡排序的代码和流程」）时，\n"
+        "在回答末尾附上一个 ```algo-viz 代码块。仅列举算法、只解释概念、只对比优劣时不要输出。\n"
         "⚠️═══════════════════════════════════════════════════════════⚠️"
     ) + ALGO_VIS_PROMPT + "\n\n" + (
         "【重要】你可以使用交互式 HTML 来呈现复杂的知识点。当需要展示图表、"
@@ -681,7 +675,7 @@ async def stream_answer_fallback(
     yield _sse_source("open")
 
     full_answer = ""
-    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=4096):
+    async for token in llm_service.pro.chat_stream(messages, temperature=0.7, max_tokens=8192):
         full_answer += token
         yield _sse_token(token)
 
@@ -780,9 +774,20 @@ async def create_note_from_text(
 # ── 算法可视化提示词（三处问答 prompt 共用）──
 ALGO_VIS_PROMPT = """
 
-**触发条件**：用户提到以下关键词 → 必须输出 algo-viz。排序（冒泡/选择/插入/快速/归并/堆/希尔/计数/基数/桶）、搜索（二分/线性/DFS/BFS）、图算法（Dijkstra/Floyd/Kruskal/Prim/拓扑）、动态规划（背包/LCS/LIS/编辑距离）、树（遍历/BST/AVL）、字符串（KMP/BM/Rabin-Karp）。
+**触发条件**：当用户想了解某个具体算法的「运行流程 / 执行过程 / 演示 / 动画 / 可视化 / 一步步」时，在回答末尾输出 algo-viz 可视化。像「冒泡排序的代码和流程」这种明确提到"流程/过程"的，也要输出 algo-viz。
+以下情况**不要**输出 algo-viz，只给文字说明和代码：仅列举有哪些算法、只解释概念原理、只对比算法优劣。
 
-**输出格式**：在回答末尾追加 ```algo-viz 代码块，包含以下 JSON：
+**输出格式**：在回答末尾追加 ```algo-viz 代码块，包含 JSON 对象，只允许以下两种形态之一：
+
+**形态 A（冒泡/选择排序，务必用这种）**：冒泡排序（bubble-sort）和选择排序（selection-sort）的完整步骤由前端自动计算，你**只需要**提供 algorithm 和 array 两个字段，**不要**自己写 steps：
+```
+{
+  "algorithm": "bubble-sort",
+  "array": [64, 34, 25, 12, 22, 11]
+}
+```
+
+**形态 B（其他算法）**：其余算法需提供完整 steps，例如：
 {
   "algorithm": "算法标识",
   "array": [初始数据],
@@ -790,22 +795,21 @@ ALGO_VIS_PROMPT = """
     {"type": "compare", "i": 0, "j": 1, "desc": "比较 arr[0]=64 和 arr[1]=34"},
     {"type": "swap", "i": 0, "j": 1, "desc": "64 > 34，交换"},
     {"type": "sorted", "i": 0, "desc": "arr[0]=5 已排好"},
-    {"type": "pivot", "i": 0, "desc": "选定 arr[0]=42 为枢轴"},
     {"type": "done", "desc": "排序完成"}
   ]
 }
 
 **algorithm 取值**：bubble-sort | selection-sort | insertion-sort | quick-sort | merge-sort | heap-sort | shell-sort | binary-search | linear-search | bfs | dfs | dijkstra | knapsack
 
-**step type**：compare(比较,黄) swap(交换,红) sorted(已排好,绿) pivot(枢轴,紫) done(完成)
+**step type**（仅形态 B 使用）：compare(比较) swap(交换) sorted(已排好) pivot(枢轴) done(完成)
 
-**强制要求**：
-1. array 长度 6-12，值 5-99，不重复
-2. 完整执行过程！简单排序 15-30 步，快排/归并 20-40 步。严禁只做一趟就省略后续
-3. 冒泡：n-1 趟，每趟有 compare+swap，每趟末标记 sorted
-4. 快排：递归所有分区，每趟分区的所有比较和交换都要记录
-5. JSON 只包含 algorithm、array、steps 三个字段，确保能被 JSON.parse 正确解析
-6. 不要生成 HTML 或手动绘图，只生成 algo-viz JSON 数据"""
+**规则**：
+1. array 长度 8-10，值 5-99，不重复
+2. 冒泡排序、选择排序 → 用形态 A（只有 algorithm 和 array，绝不写 steps）
+3. 其他算法 → 用形态 B，steps 要完整、准确，每个 swap 的 i/j 索引和交换后的数组必须自洽
+4. 必须用 ```algo-viz 代码块包裹，严禁输出裸露 JSON
+5. 正文永远优先：先完整写完文字解释和代码，最后才附 algo-viz
+6. 直接给出答案，不要输出冗长的思考过程"""
 
 
 # 导出状态消息函数供 API 层使用
