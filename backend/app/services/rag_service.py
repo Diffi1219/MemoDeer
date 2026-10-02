@@ -774,42 +774,25 @@ async def create_note_from_text(
 # ── 算法可视化提示词（三处问答 prompt 共用）──
 ALGO_VIS_PROMPT = """
 
-**触发条件**：当用户想了解某个具体算法的「运行流程 / 执行过程 / 演示 / 动画 / 可视化 / 一步步」时，在回答末尾输出 algo-viz 可视化。像「冒泡排序的代码和流程」这种明确提到"流程/过程"的，也要输出 algo-viz。
-以下情况**不要**输出 algo-viz，只给文字说明和代码：仅列举有哪些算法、只解释概念原理、只对比算法优劣。
+**触发条件**：只有冒泡排序（bubble-sort）和选择排序（selection-sort）这两种算法需要输出 algo-viz 可视化。当用户想了解这两种算法的「运行流程 / 执行过程 / 演示 / 动画 / 可视化 / 一步步」时，在回答末尾输出 algo-viz 代码块。
+**其他任何算法**（快速排序、归并排序、堆排序、插入排序、希尔排序、二分查找、线性查找、BFS/DFS、图算法、动态规划等）**一律不要**输出 algo-viz，只输出文字说明和代码。
 
-**输出格式**：在回答末尾追加 ```algo-viz 代码块，包含 JSON 对象，只允许以下两种形态之一：
-
-**形态 A（冒泡/选择排序，务必用这种）**：冒泡排序（bubble-sort）和选择排序（selection-sort）的完整步骤由前端自动计算，你**只需要**提供 algorithm 和 array 两个字段，**不要**自己写 steps：
-```
+**输出格式**：在回答末尾追加 ```algo-viz 代码块，**只包含 algorithm 和 array 两个字段**，**绝对不要**自己写 steps（完整步骤由前端自动计算）：
+```json
 {
   "algorithm": "bubble-sort",
   "array": [64, 34, 25, 12, 22, 11]
 }
 ```
 
-**形态 B（其他算法）**：其余算法需提供完整 steps，例如：
-{
-  "algorithm": "算法标识",
-  "array": [初始数据],
-  "steps": [
-    {"type": "compare", "i": 0, "j": 1, "desc": "比较 arr[0]=64 和 arr[1]=34"},
-    {"type": "swap", "i": 0, "j": 1, "desc": "64 > 34，交换"},
-    {"type": "sorted", "i": 0, "desc": "arr[0]=5 已排好"},
-    {"type": "done", "desc": "排序完成"}
-  ]
-}
-
-**algorithm 取值**：bubble-sort | selection-sort | insertion-sort | quick-sort | merge-sort | heap-sort | shell-sort | binary-search | linear-search | bfs | dfs | dijkstra | knapsack
-
-**step type**（仅形态 B 使用）：compare(比较) swap(交换) sorted(已排好) pivot(枢轴) done(完成)
+**algorithm 取值**（仅限这两种）：bubble-sort | selection-sort
 
 **规则**：
 1. array 长度 8-10，值 5-99，不重复
-2. 冒泡排序、选择排序 → 用形态 A（只有 algorithm 和 array，绝不写 steps）
-3. 其他算法 → 用形态 B，steps 要完整、准确，每个 swap 的 i/j 索引和交换后的数组必须自洽
-4. 必须用 ```algo-viz 代码块包裹，严禁输出裸露 JSON
-5. 正文永远优先：先完整写完文字解释和代码，最后才附 algo-viz
-6. 直接给出答案，不要输出冗长的思考过程"""
+2. 只需要 algorithm 和 array 两个字段，绝不写 steps 字段
+3. 必须用 ```algo-viz 代码块包裹，严禁输出裸露 JSON
+4. 正文永远优先：先完整写完文字解释和代码，最后才附 algo-viz
+5. 直接给出答案，不要输出冗长的思考过程"""
 
 
 # 导出状态消息函数供 API 层使用

@@ -1,12 +1,15 @@
 __pycache__/
 *.pyc
+.venv/
+venv/
 node_modules/
 dist/
 .vite/
 data/
 models/
-.env
 *.sqlite3
 .DS_Store
+*.log
 scripts/node_modules/
+.claude/settings.local.json
 MemoDeer_Intro.pptx

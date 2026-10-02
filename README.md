@@ -32,7 +32,7 @@
 │   │   │   └── rag_service.py       # RAG管线
 │   │   └── utils/
 │   ├── data/              # 运行时数据（自动创建）
-│   ├── .env               # 环境变量（需配置API Key）
+│   ├── .env               # 非敏感默认配置；敏感值放在系统环境变量
 │   └── requirements.txt
 │
 ├── frontend/         # React 前端（运行在手机/浏览器）
@@ -70,43 +70,131 @@
 │   ├── public/
 │   └── package.json
 │
-└── doc/              # 产品文档
+└── docs/             # 产品文档
     ├── 产品选题卡.md
     └── AI产品模型选型报告.md
 ```
 
 ## 快速开始
 
-### 1. 后端启动（PC端）
+### 0. 准备环境
+
+首次使用只需要两样基础工具：
+
+1. **Miniconda / Anaconda**（用于创建 Python 环境）
+2. **Node.js 18 或更高版本**（前端 Vite 5 要求）
+
+建议始终为后端创建独立虚拟环境，避免和电脑上其他 Python 项目冲突。
+
+### 1. 下载并配置后端
+
+先创建并激活 Conda 虚拟环境：
 
 ```bash
-# 安装依赖
-pip install -r requirements.txt
+conda create -n memodeer python=3.11 -y
+conda activate memodeer
+```
 
-# 配置 DeepSeek API Key
-# 编辑 .env 文件，填入你的 API Key:
-# DEEPSEEK_API_KEY=sk-xxxxxxxx
-#
-# 可选：切换模型
-# LLM_FLASH_MODEL=deepseek-v4-flash      → 知识点提取（轻量 NLU）
-# LLM_PRO_MODEL=deepseek-v4-pro          → 强推理问答（建议用最强模型）
-# 注：deepseek-chat / deepseek-reasoner 将于 2026/07/24 弃用
+先安装 PyTorch。它是 '加载本地向量模型所需的底层运行时' 。建议根据硬件选择 CPU 或 GPU 版本：
 
-# 启动服务
+**CPU 版（默认推荐）**
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+CPU 版下载地址：<https://download.pytorch.org/whl/cpu>
+
+**GPU 版**
+
+先确认电脑有 NVIDIA GPU 且已安装匹配的 NVIDIA 驱动，再到 PyTorch 官网选择你的 CUDA 版本：<https://pytorch.org/get-started/locally/>
+
+常见 CUDA wheel 源示例：
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+```
+
+GPU wheel 源：<https://download.pytorch.org/whl/cu128>
+
+然后安装 Python 依赖。下面的命令都在 Conda 环境已激活时执行：
+
+```bash
+# 注意：以下python环境可能没有列全，安装时若缺失部分环境请按照报错提示下载
+pip install -r backend/requirements.txt
+```
+
+**API Key 必须放在本机环境变量中**
+
+临时设置，仅当前终端有效：
+
+**Windows PowerShell**
+
+```powershell
+$env:DEEPSEEK_API_KEY = "sk-your-real-api-key" # 填写你的api key用于问答
+$env:JWT_SECRET = "change-this-to-a-long-random-secret" # 随机写一串长字符串即可
+```
+
+**macOS / Linux**
+
+```bash
+export DEEPSEEK_API_KEY="sk-your-real-api-key"
+export JWT_SECRET="change-this-to-a-long-random-secret"
+```
+
+如果要持久保存，Windows 可以使用 `setx DEEPSEEK_API_KEY "..."` 和 `setx JWT_SECRET "..."`，设置后需要重新打开终端；macOS / Linux 可把上面的 `export` 写入 `~/.zshrc` 或 `~/.bashrc` 后重新加载终端。
+
+`backend/.env` 可提交用于保存非敏感默认配置：
+
+```ini
+LLM_FLASH_MODEL=deepseek-v4-flash      # 轻量 NLU：文档格式化、知识点提取
+LLM_PRO_MODEL=deepseek-v4-pro          # 强推理：RAG 问答、复杂问题
+EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
+HF_ENDPOINT=https://hf-mirror.com
+```
+
+> `DEEPSEEK_API_KEY` 和 `JWT_SECRET` 属于敏感信息。即使 `.env` 不再被忽略，也不要把这两个值写入 `backend/.env`、README、截图或日志。
+
+### 2. 准备向量模型
+
+后端默认使用 `BAAI/bge-small-zh-v1.5`，完整模型约 95MB。推荐用项目自带脚本下载；它会使用国内镜像，并把文件放到 `backend/models/bge-small-zh-v1.5/`：
+
+```bash
+python backend/scripts/download_embedding.py
+```
+
+如果你更喜欢手动执行下载命令，也先安装完上面的 Python 依赖，再在仓库根目录运行：
+
+**Windows PowerShell**
+
+```powershell
+$env:HF_ENDPOINT = "https://hf-mirror.com"
+huggingface-cli download BAAI/bge-small-zh-v1.5 --local-dir backend\models\bge-small-zh-v1.5
+```
+
+**macOS / Linux**
+
+```bash
+HF_ENDPOINT=https://hf-mirror.com huggingface-cli download BAAI/bge-small-zh-v1.5 \
+  --local-dir backend/models/bge-small-zh-v1.5
+```
+
+下载完成后，目录中至少应有 `model.safetensors` 或 `pytorch_model.bin`、`config.json`、`tokenizer.json`、`vocab.txt` 和 `1_Pooling/config.json`。模型目录已被 `.gitignore` 忽略，不会进入 GitHub。
+
+### 3. 启动后端
+
+```bash
 cd backend
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-后端启动后访问 http://localhost:8000/docs 查看API文档。
+后端启动后访问 http://localhost:8000/docs 查看API文档。首次启动会自动创建 SQLite 数据表和 `backend/data/` 运行时目录。
 
-### 2. 前端启动
+### 4. 启动前端
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
 cd frontend
+npm install
 npm run dev
 ```
 
@@ -116,9 +204,8 @@ npm run dev
 1. 确保手机和PC在同一WiFi网络
 2. 查看PC的局域网IP（Windows: `ipconfig`，找到IPv4地址，如192.168.1.100）
 3. 手机浏览器访问 `http://192.168.1.100:5173`
-4. 在设置页面配置后端地址为 `http://192.168.1.100:8000`（或使用Vite代理）
 
-### 3. 使用流程
+### 5. 使用流程
 
 1. **注册/登录** → 创建账号，登录页底部展示核心功能预览
 2. **创建笔记本** → 首页点击"创建第一个笔记本"（新用户有功能亮点引导）
@@ -134,6 +221,36 @@ npm run dev
 12. **知识点提取（会员）** → 笔记本"知识点"Tab → AI 自动提取核心概念
 13. **全局搜索** → 首页右上角搜索图标 → 跨笔记本混合搜索 → 按笔记本分组展开
 14. **添加到笔记** → 降级回答底部"添加到笔记"按钮 → 编辑内容 → 保存为 Markdown 笔记
+
+## 上传到 GitHub
+
+`.gitignore` 已经忽略数据库、上传文件、模型权重、依赖目录和构建产物。`backend/.env` 可以提交，但必须确认其中不包含真实 API Key 或 JWT Secret。推送前可再检查一次：
+
+```bash
+git status --short
+git check-ignore -v backend/data backend/models
+git diff -- backend/.env
+```
+
+如果确认没有私有数据，再初始化并推送：
+
+```bash
+git remote add origin https://github.com/<your-name>/<your-repo>.git
+git branch -M main
+git add .
+git commit -m "Initial public release"
+git push -u origin main
+```
+
+如果仓库已有远程地址，把 `git remote add` 换成 `git remote set-url origin <仓库地址>`。
+
+
+
+
+
+
+
+# 部分原理介绍
 
 ## Embedding 模型
 
